@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JARVIS · Multiversum</title>
+<link rel="stylesheet" href="/core/core.css">
+<style>
+  /* Oberfläche 16 von 22 · MULTIVERSUM */
+  :root{--ac:#6f8bff;--ac-rgb:111,139,255;--bg:#040412}
+  #th-cap{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:5;text-align:center;pointer-events:none}
+  #th-cap h1{margin:0;font-size:12px;letter-spacing:.42em;font-weight:600;color:rgba(255,255,255,.88);padding-left:.42em}
+  #th-cap p{margin:6px 0 0;font-size:11px;color:var(--mut);letter-spacing:.2em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="th-cap"><h1 id="thName">JARVIS</h1><p id="thState">multiversum · bereit</p></div>
+<script src="/core/core.js"></script>
+<script>
+(function () {
+  const J = window.Jarvis, $ = id => document.getElementById(id), TAU = Math.PI * 2;
+  const cap = J => { const nm = (J.settings.name || "Jarvis").toUpperCase(); $("thName").textContent = nm; document.title = nm + " · Multiversum";
+    J.on("state", s => { $("thState").textContent = "multiversum · " + { idle: "bereit", listening: "hört zu", thinking: "denkt nach", speaking: "spricht" }[s]; }); };
+  const rnd = Math.random, gauss = () => (rnd() + rnd() + rnd() + rnd() - 2) / 2;
+  let cx = 0, cy = 0, R = 200, rot = 0;
+  const U = [], bgs = [], COL = [[130, 150, 255], [255, 130, 215], [110, 235, 255], [255, 190, 110], [170, 120, 255], [120, 255, 190], [255, 120, 140], [200, 220, 255]];
+  J.registerTheme({
+    id: "multiversum", maus: "anziehen",
+    init(J) {
+      cap(J);
+      for (let i = 0; i < 8; i++) { const stars = []; for (let k = 0; k < 70; k++) { const r = 0.08 + Math.pow(rnd(), 0.8) * 0.8; stars.push({ r, a: (k % 2) * Math.PI + r * 3.2 + gauss() * 0.5, p: rnd() * TAU }); }
+        U.push({ c: COL[i], main: i === 0, d: i ? 1.2 + (i % 3) * 0.36 : 0, a: i / 7 * TAU, inc: (rnd() - 0.5) * 0.9, sz: i ? 0.2 + rnd() * 0.16 : 0.5, sp: 0.5 + rnd() * 0.8, tl: rnd() * Math.PI, stars, p: rnd() * TAU }); }
+      for (let i = 0; i < 200; i++) bgs.push({ x: rnd(), y: rnd(), s: rnd(), p: rnd() * TAU });
+    },
+    resize(w, h) { cx = w / 2; cy = h * 0.46; R = Math.min(w * 0.21, h * 0.27); J.orbit = { x: cx, y: cy, r: R * 0.9 }; },
+    draw(ctx, w, h, S) {
+      const t = S.t, sp = J.sprite;
+      rot += S.dt * (0.07 + S.think * 0.5 + S.speak * 0.1);
+      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.75);
+      bg.addColorStop(0, "#14123a"); bg.addColorStop(0.5, "#08071c"); bg.addColorStop(1, "#020208");
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+      for (const s of bgs) { ctx.globalAlpha = 0.15 + 0.35 * Math.sin(t * (0.4 + s.s) + s.p) ** 2; ctx.fillStyle = "#fff"; ctx.fillRect(s.x * w, s.y * h, 1 + s.s, 1 + s.s); }
+      ctx.globalAlpha = 1;
+      const br = R * (1 + S.pulse * 0.04), F = 4;
+      const P = U.map(u => { const a = u.a + rot * u.sp, x = Math.cos(a) * u.d, z0 = Math.sin(a) * u.d, y = z0 * Math.sin(u.inc) * 0.6 + Math.sin(t * 0.3 + u.p) * 0.05, z = z0 * Math.cos(u.inc), k = F / (F + z);
+        return { u, x: cx + x * br * k, y: cy + y * br * k, z, r: br * u.sz * k * (1 + S.level * (u.main ? 0.12 : 0.25 * (0.5 + 0.5 * Math.sin(t * 7 + u.p)))) }; });
+      // Lichtfäden zwischen den Universen
+      ctx.globalCompositeOperation = "lighter"; ctx.lineWidth = 1;
+      for (let i = 1; i < P.length; i++) for (const j of [0, (i % (P.length - 1)) + 1]) {
+        const a = P[i], b = P[j], mx = (a.x + b.x) / 2 + (a.y - b.y) * 0.18, my = (a.y + b.y) / 2 + (b.x - a.x) * 0.18;
+        ctx.strokeStyle = `rgba(${a.u.c.join(",")},${(j ? 0.07 : 0.16) + S.level * 0.15 + S.think * 0.1})`; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(mx, my, b.x, b.y); ctx.stroke();
+        const q = (t * (0.25 + S.think * 0.6 + S.speak * 0.3) + i * 0.37 + j * 0.2) % 1, iq = 1 - q;
+        J.glowAt(ctx, sp(...a.u.c, true), iq * iq * a.x + 2 * iq * q * mx + q * q * b.x, iq * iq * a.y + 2 * iq * q * my + q * q * b.y, 5 + S.level * 5, 0.75 * Math.sin(q * Math.PI));
+      }
+      P.sort((a, b) => b.z - a.z);
+      for (const p of P) {
+        const u = p.u, c = u.c.join(","), al = p.z > 0 ? 0.7 : 1;
+        ctx.globalCompositeOperation = "lighter";
+        J.glowAt(ctx, sp(...u.c), p.x, p.y, p.r * 3.4, (0.28 + S.level * 0.2) * al);
+        ctx.globalCompositeOperation = "source-over";
+        const g = ctx.createRadialGradient(p.x - p.r * 0.3, p.y - p.r * 0.35, p.r * 0.05, p.x, p.y, p.r);
+        g.addColorStop(0, `rgba(${c},${0.2 * al})`); g.addColorStop(0.7, `rgba(${c},${0.07 * al})`); g.addColorStop(1, `rgba(${c},${0.38 * al})`);
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill();
+        ctx.strokeStyle = `rgba(255,255,255,${(0.3 + S.listen * 0.2) * al})`; ctx.lineWidth = 1; ctx.stroke();
+        ctx.globalCompositeOperation = "lighter";
+        const s1 = sp(...u.c, true), ct = Math.cos(u.tl + t * 0.05), sn = Math.sin(u.tl + t * 0.05);
+        for (const s of u.stars) { const a = s.a + t * u.sp * 0.5 / (0.3 + s.r), x0 = Math.cos(a) * s.r * 0.86, y0 = Math.sin(a) * s.r * 0.86 * 0.45;
+          J.glowAt(ctx, s1, p.x + (x0 * ct - y0 * sn) * p.r, p.y + (x0 * sn + y0 * ct) * p.r, (u.main ? 4 : 2.6) * (1 + S.level), (0.4 + 0.4 * Math.sin(t * 2 + s.p)) * al); }
+        J.glowAt(ctx, sp(255, 255, 255, true), p.x, p.y, p.r * (u.main ? 0.5 + S.level * 0.5 : 0.4), 0.9 * al);
+        const hl = ctx.createRadialGradient(p.x - p.r * 0.4, p.y - p.r * 0.5, 0, p.x - p.r * 0.4, p.y - p.r * 0.5, p.r * 0.5);
+        hl.addColorStop(0, `rgba(255,255,255,${0.3 * al})`); hl.addColorStop(1, "rgba(255,255,255,0)"); ctx.fillStyle = hl; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+  });
+})();
+</script>
+</body>
+</html>

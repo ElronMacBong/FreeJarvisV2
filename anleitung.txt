@@ -1,0 +1,1161 @@
+=====================================================================
+  FreeJarvis · JARVIS YouTube-Edition 2.0 · ANLEITUNG
+=====================================================================
+
+INHALT
+   1. Was ist das?
+   2. Schnellstart in 5 Minuten
+   3. Variante A: Lokal mit Ollama (kostenlos, ohne Schlüssel)
+   4. Variante B: Claude mit API-Schlüssel
+   5. Variante C: OpenAI oder kompatible Dienste (Groq, OpenRouter, LM Studio)
+   6. WO KOMMT DER API-SCHLÜSSEL HIN?
+   7. Zwischen lokal und API wechseln
+   8. Stimme
+   9. Mikrofon
+  10. Gedächtnis
+  11. Befehle und Automation
+  12. Die 25 Oberflächen
+  13. Ordner und Dateien
+  14. FEHLERBEHEBUNG (auch: Wechsel von Teil 1 zu Teil 2)
+  15. DATENSCHUTZ: WAS VERLÄSST MEINEN PC?
+  16. Sicherheit
+  17. Für Bastler: eigene Oberfläche bauen
+  18. BOTS: DEIN EIGENES KI-TEAM
+  19. Was ist neu in 2.0?
+  20. PC-STEUERUNG: ORDNER, DATEIEN, PROGRAMME, SKRIPTE, SKRIPTE
+  21. KOSTEN: SPARMODUS, LIMIT UND KOSTEN-WIDGET
+  22. HOME ASSISTANT UND WEBHOOKS (Smart Home, für Bastler)
+  23. WIDGETS, KLANG UND MAUS
+
+
+---------------------------------------------------------------------
+1. WAS IST DAS?
+---------------------------------------------------------------------
+Jarvis ist ein persönlicher KI-Assistent im Browser. Er spricht, hört
+zu, merkt sich Dinge über dich und kann Timer stellen, Webseiten öffnen,
+das Wetter und deine Systemwerte zeigen.
+
+Version 2.0 ist das große Update. Neu sind unter anderem:
+  - ein Team aus Bots, die sichtbar um Jarvis kreisen und eigene
+    Aufgaben übernehmen (Abschnitt 18)
+  - 25 Oberflächen, Fenster in Milchglas-Optik, Widgets, Klang
+    (Abschnitte 12 und 23)
+  - PC-Steuerung: Ordner, Dateien, Programme, Skripte schreiben
+    (Abschnitt 20, standardmäßig aus)
+  - Kostenkontrolle für API-Nutzer: Sparmodus, Monatslimit und ein
+    Kosten-Widget (Abschnitt 21)
+  - Schnittstelle zu Home Assistant und Webhooks (Abschnitt 22,
+    standardmäßig aus)
+
+Das Besondere an dieser Version: EIN Programm für ALLE Varianten.
+  - Lokal mit Ollama   (kostenlos, läuft auf deinem PC, kein Internet nötig)
+  - Claude per API     (Anthropic, sehr gute Antworten, mit Websuche)
+  - OpenAI-kompatibel  (OpenAI, Groq, OpenRouter, LM Studio ...)
+
+Du musst KEINEN Code ändern, um zwischen den Varianten zu wechseln.
+Alles geht über die Einstellungen (oben links) und die Modellauswahl
+(oben rechts).
+
+Was du brauchst:
+  - Windows 10/11 (Mac und Linux gehen auch)
+  - Python 3.8 oder neuer  (https://www.python.org)
+  - Google Chrome oder Microsoft Edge (für die Spracheingabe)
+  - Für die lokale Variante: Ollama (https://ollama.com)
+Sonst nichts. Es muss nichts mit "pip install" installiert werden.
+
+
+---------------------------------------------------------------------
+2. SCHNELLSTART IN 5 MINUTEN
+---------------------------------------------------------------------
+  1. Ordner "Jarvis" entpacken, z.B. nach C:\Jarvis
+     (nicht im ZIP lassen, sonst klappt es nicht)
+  2. Doppelklick auf  start.bat
+     Es öffnet sich ein schwarzes Fenster. Das ist der Jarvis-Server.
+     Dieses Fenster OFFEN LASSEN, solange du Jarvis benutzt.
+  3. Der Browser öffnet sich automatisch mit  http://localhost:5050
+     (Falls nicht: die Adresse von Hand in Chrome oder Edge eingeben.)
+  4. Warten, bis der Ladescreen fertig ist, dann auf "STARTEN" klicken.
+  5. Oben rechts siehst du, welche KI gefunden wurde.
+     Grüner Punkt = bereit. Roter Punkt = noch keine KI eingerichtet.
+     -> Dann Variante A, B oder C einrichten (unten).
+
+WICHTIG: Die HTML-Dateien NICHT per Doppelklick öffnen!
+Immer zuerst start.bat starten und dann http://localhost:5050 aufrufen.
+Wer die Datei direkt öffnet (Adresse beginnt mit file:///), hat kein
+Mikrofon, keine KI und keine Einstellungen.
+
+Beenden: Im schwarzen Fenster Strg + C drücken oder das Fenster schließen.
+
+
+---------------------------------------------------------------------
+3. VARIANTE A: LOKAL MIT OLLAMA (kostenlos, ohne Schlüssel)
+---------------------------------------------------------------------
+  1. Ollama installieren: https://ollama.com -> Download für Windows
+  2. Ein Sprachmodell laden. Eingabeaufforderung (cmd) öffnen und tippen:
+
+        ollama pull llama3.2
+
+     llama3.2 ist klein (rund 2 GB) und läuft auch auf schwächeren PCs.
+     Größere Modelle antworten klüger und auf Deutsch besser, brauchen
+     aber mehr Grafikspeicher, z.B.:
+        ollama pull qwen3:8b
+        ollama pull gemma3:12b
+     Welche Modelle installiert sind:  ollama list
+
+  3. Prüfen, ob Ollama läuft: im Browser  http://localhost:11434  öffnen.
+     Dort muss stehen: "Ollama is running".
+     Wenn nicht: Ollama aus dem Startmenü starten (Lama-Symbol unten
+     rechts in der Taskleiste) oder in cmd tippen:  ollama serve
+  4. In Jarvis oben rechts auf die Modellauswahl klicken und
+     "↻ Modelle neu suchen" wählen. Dein Modell erscheint unter
+     "Lokal · Ollama". Anklicken. Fertig.
+
+Ollama auf einem anderen PC oder unter WSL? Siehe Abschnitt 14.
+
+Tipp: Die erste Antwort nach dem Start dauert oft länger, weil Ollama
+das Modell erst in den Speicher lädt. Danach geht es schneller.
+
+
+---------------------------------------------------------------------
+4. VARIANTE B: CLAUDE MIT API-SCHLÜSSEL
+---------------------------------------------------------------------
+  1. Auf https://console.anthropic.com anmelden.
+  2. Unter "Billing" Guthaben aufladen.
+     ACHTUNG: Ein Claude-Abo (z.B. Pro) ist KEIN API-Guthaben.
+     Die API wird getrennt über die Console abgerechnet.
+  3. Unter "API Keys" einen neuen Schlüssel erstellen und kopieren.
+     Er beginnt mit  sk-ant-
+  4. Schlüssel in Jarvis eintragen (siehe Abschnitt 6).
+  5. Oben rechts ein Claude-Modell auswählen.
+
+Websuche: Claude kann im Web nachsehen (Einstellungen -> KI & Modelle ->
+"Websuche"). Das kostet pro Suche etwas extra. Bei Ollama und OpenAI-
+kompatiblen Diensten gibt es in dieser Version keine Websuche.
+
+
+---------------------------------------------------------------------
+5. VARIANTE C: OPENAI ODER KOMPATIBLE DIENSTE
+---------------------------------------------------------------------
+Viele Anbieter sprechen dieselbe "Sprache" wie OpenAI. Du brauchst nur
+die Basis-Adresse und einen Schlüssel:
+
+  Anbieter      Basis-Adresse                       Schlüssel
+  ----------    ---------------------------------   -----------------
+  OpenAI        https://api.openai.com/v1           sk-...
+  Groq          https://api.groq.com/openai/v1      gsk_...
+  OpenRouter    https://openrouter.ai/api/v1        sk-or-...
+  LM Studio     http://localhost:1234/v1            leer lassen
+
+Bei LM Studio vorher in LM Studio den lokalen Server starten.
+Die Adressen stammen aus den Dokumentationen der Anbieter und können
+sich ändern. Im Zweifel dort nachsehen.
+
+
+---------------------------------------------------------------------
+6. WO KOMMT DER API-SCHLÜSSEL HIN?
+---------------------------------------------------------------------
+WEG 1 (empfohlen): In Jarvis selbst
+  1. Oben links auf  "Einstellungen"
+  2. Reiter "KI & Modelle"
+  3. Den Schlüssel in das passende Feld einfügen:
+        Claude              -> Feld "API-Schlüssel" im Kasten "Claude"
+        OpenAI-kompatibel   -> "Basis-Adresse" + "API-Schlüssel"
+        ElevenLabs (Stimme) -> Reiter "Stimme", Kasten "ElevenLabs"
+  4. "Verbindung testen" klicken. Bei Erfolg steht dort:
+        ✓ verbunden · X Modelle
+  5. "Speichern" klicken.
+
+WEG 2: Von Hand in der Datei  einstellungen.json
+  Die Datei entsteht beim ersten Start neben server.py. Mit dem Editor
+  öffnen und den Schlüssel zwischen die Anführungszeichen setzen:
+
+        "claude_key": "sk-ant-DEIN-SCHLUESSEL",
+        "openai_key": "sk-DEIN-SCHLUESSEL",
+        "openai_url": "https://api.openai.com/v1",
+        "eleven_key": "DEIN-ELEVENLABS-SCHLUESSEL",
+        "eleven_voice": "DEINE-STIMMEN-ID",
+
+  Wichtig: Anführungszeichen und Kommas stehen lassen. Ist die Datei
+  kaputt, nimmt Jarvis die Standardwerte. Dann die Datei löschen,
+  Jarvis neu starten, sie wird neu angelegt.
+  Ein Neustart nach dem Ändern ist nicht nötig, Jarvis liest die Datei
+  bei jeder Anfrage neu.
+
+In den Einstellungen siehst du nach dem Speichern nur noch "••••" und
+die letzten 4 Zeichen. Der Schlüssel bleibt auf deinem PC und wird
+nur an den jeweiligen Anbieter geschickt.
+
+
+---------------------------------------------------------------------
+7. ZWISCHEN LOKAL UND API WECHSELN
+---------------------------------------------------------------------
+Oben rechts auf die Modellauswahl klicken. Dort stehen alle Modelle,
+gruppiert nach:
+     Lokal · Ollama
+     Claude · API
+     OpenAI-kompatibel · API
+Ein Klick genügt. Jarvis merkt sich die Auswahl.
+Steht in einer Gruppe "– nicht verfügbar", zeigt der Text daneben den
+Grund (Ollama läuft nicht, kein Schlüssel, Schlüssel ungültig ...).
+
+Du kannst also z.B. Ollama für den Alltag nutzen und für schwierige
+Fragen kurz auf Claude umschalten. Der Gesprächsverlauf bleibt erhalten.
+
+
+---------------------------------------------------------------------
+8. STIMME
+---------------------------------------------------------------------
+Einstellungen -> Stimme:
+  Browser-Stimme  kostenlos. Welche Stimmen es gibt, hängt von Windows
+                  und Browser ab. In Microsoft Edge gibt es sehr
+                  natürliche Stimmen (Name enthält "Natural").
+                  Fehlt eine deutsche Stimme: Windows-Einstellungen ->
+                  Zeit und Sprache -> Sprache -> Deutsch -> Sprachausgabe.
+  ElevenLabs      klingt am besten, auch mit deiner eigenen geklonten
+                  Stimme. Braucht Schlüssel und Stimmen-ID von
+                  https://elevenlabs.io  und verbraucht dort Guthaben.
+                  Fällt ElevenLabs aus, spricht Jarvis mit der
+                  Browser-Stimme weiter.
+  Stumm           nur Text.
+
+"Stimme testen" spielt einen Probesatz ab.
+Die Animation bewegt sich mit der Stimme. Bei ElevenLabs folgt sie der
+echten Lautstärke. Bei der Browser-Stimme lässt der Browser das nicht
+zu, dort wird die Bewegung aus dem Sprechrhythmus nachgebildet.
+
+
+---------------------------------------------------------------------
+9. MIKROFON
+---------------------------------------------------------------------
+Einstellungen -> Mikrofon. Drei Modi:
+  An, wenn fertig gesprochen  (empfohlen) Jarvis hört zu, macht während
+                              seiner Antwort Pause und hört danach
+                              wieder zu. So hört er sich nicht selbst.
+  Immer an                    Du kannst ihm ins Wort fallen ("Stopp").
+                              Mit Lautsprechern kann er sich selbst
+                              hören, daher Headset empfohlen.
+  Nur auf Knopfdruck          Mikro-Knopf oder Leertaste drücken, Satz
+                              sagen, fertig.
+
+Aktivierungswort: Wenn eingeschaltet, reagiert Jarvis nur, wenn das Wort
+(Standard "Jarvis") im Satz vorkommt. Sagst du nur "Jarvis", antwortet
+er "Ja?" und hört 8 Sekunden ohne Aktivierungswort zu.
+
+Wichtig zur Spracherkennung:
+  - Sie funktioniert nur in Chrome und Edge (nicht in Firefox).
+  - Sie läuft über einen Online-Dienst des Browsers, braucht also
+    Internet. Das gilt auch, wenn die KI selbst lokal über Ollama läuft.
+    Schreiben geht immer, auch komplett offline.
+  - Beim ersten Mal fragt der Browser nach dem Mikrofon -> "Zulassen".
+
+Tasten:  Leertaste = Mikrofon an/aus (wenn kein Textfeld aktiv ist)
+         Esc       = Jarvis sofort stoppen
+         Enter     = Nachricht senden
+
+
+---------------------------------------------------------------------
+10. GEDÄCHTNIS
+---------------------------------------------------------------------
+Jarvis merkt sich Dinge über dich in der Datei  gedaechtnis.json.
+  - "Merk dir, dass ich am Freitag Zahnarzt habe"  -> wird gespeichert
+  - "Vergiss Zahnarzt"                             -> wird gelöscht
+  - "Was weißt du über mich?"                      -> Zusammenfassung
+  - Selbst dazulernen (Einstellungen -> Gedächtnis): Jarvis erkennt
+    selbst, wenn du etwas Wichtiges über dich erzählst, und merkt es
+    sich. Das klappt mit großen Modellen (Claude, GPT) zuverlässig,
+    kleine lokale Modelle übersehen es öfter. "Merk dir ..." klappt
+    immer, egal welches Modell.
+  - In den Einstellungen siehst du alle Einträge, kannst neue anlegen
+    und einzelne oder alle löschen.
+  - Bei einer Cloud-KI bleibt das Gedächtnis standardmäßig auf deinem PC
+    und wird NICHT mitgeschickt. Ändern: Einstellungen -> Datenschutz
+    (siehe Abschnitt 15).
+
+
+---------------------------------------------------------------------
+11. BEFEHLE UND AUTOMATION
+---------------------------------------------------------------------
+Diese Befehle erkennt Jarvis selbst, sie funktionieren mit JEDEM Modell:
+
+  "Bist du da?" / "Was geht ab?" /    Weck-Briefing: Systemwerte, Wetter,
+  "Guten Morgen" / "Wach auf"         was heute ansteht (aus dem Gedächtnis)
+  "Erinnere mich in 10 Minuten an     Timer mit Erinnerung (oben rechts)
+   die Pizza"
+  "Stell einen Timer auf 5 Minuten"   Timer
+  "Merk dir ..." / "Vergiss ..."      Gedächtnis
+  "Öffne YouTube" / "Öffne heise.de"  Webseite öffnen
+  "Wie ist das Wetter?"               Wetter mit Anzeige
+  "Wie läuft mein System?"            CPU, Arbeitsspeicher, Festplatte
+  "Wechsel die Oberfläche auf Aura"   anderes Design
+  "@Recherche, was ist ..."           einen Bot direkt ansprechen (Abschnitt 18)
+  "Schalte das Wohnzimmerlicht an"    Home Assistant (Abschnitt 22)
+  "Stopp"                             sofort still
+
+Wetter-Ort: Einstellungen -> Automation -> "Ort fürs Wetter".
+Wetterdaten: Open-Meteo (kostenlos, kein Schlüssel).
+
+ROUTINEN (Einstellungen -> Automation):
+Eigene Befehle ohne Programmieren. "Wenn ich sage ..." -> "Dann ...":
+  Weck-Briefing       z.B. "guten morgen"
+  Webseite öffnen     z.B. "mein kanal"  ->  https://youtube.com/@...
+  Text sagen          z.B. "feierabend"  ->  "Schönen Feierabend!"
+  Oberfläche wechseln Wert: vortex, nova, sphaeren, aura, gitter,
+                      begleiter, band, saga, membran, prisma, geodaet,
+                      helix, strata, bluete, galaxie, multiversum,
+                      avatar, singularitaet, synapse, ozean, tesserakt,
+                      reaktor, retro, kosmos, phantom
+  Timer (Minuten)     z.B. "pause machen" -> 15
+  Home Assistant      z.B. "kino an" -> scene.turn_on scene.kinoabend
+  Webhook             z.B. "gute nacht" -> http://.../api/webhook/...
+                      (beides in Abschnitt 22)
+Briefing beim Start: Einstellungen -> Automation.
+Tipp: Wähle für Routinen Sätze, die nicht schon ein eingebauter Befehl
+sind. "Melde dich" oder "Guten Morgen" starten zusätzlich das Briefing.
+Gut sind eindeutige Sätze wie "Kino an" oder "Signal senden".
+
+Blockiert der Browser das Öffnen von Webseiten, steht im Chat ein Link.
+Dauerhaft erlauben: in der Adresszeile auf das Pop-up-Symbol klicken
+-> "Pop-ups von localhost immer zulassen".
+
+
+---------------------------------------------------------------------
+12. DIE 25 OBERFLÄCHEN
+---------------------------------------------------------------------
+Alle Oberflächen haben dieselben Funktionen (Chat, Einstellungen,
+Modellauswahl). Nur das Aussehen und die Animation sind anders.
+
+  Vortex     jarvis.html                  HAUPTOBERFLÄCHE: HUD mit
+                                          Energie-Wirbel, 6 Modulen,
+                                          Live-Werten und Aktivitätsliste
+  Nova       oberflaechen/nova.html       glühender Funken-Kern, große
+                                          Schrift "Ich bin Jarvis."
+  Sphären    oberflaechen/sphaeren.html   Glas-Sphären mit Neuronennetz
+  Aura       oberflaechen/aura.html       Glaskugel mit Neon-Schleifen
+  Gitter     oberflaechen/gitter.html     grünes Drahtgitter mit Stern
+  Begleiter  oberflaechen/begleiter.html  freundliche Kugel mit Augen,
+                                          die dem Mauszeiger folgen
+  Band       oberflaechen/band.html       Lichtband-Ring um einen Kern
+
+Neu in 2.0:
+  Saga       oberflaechen/saga.html       rote Nebelwolke aus Fäden und
+                                          Funken
+  Membran    oberflaechen/membran.html    weiche blaue Hüllen, die wie
+                                          eine Zelle pulsieren
+  Prisma     oberflaechen/prisma.html     facettierter Kristall aus
+                                          Glasflächen
+  Geodät     oberflaechen/geodaet.html    Punktkugel mit Gitternetz und
+                                          Strahlen
+  Helix      oberflaechen/helix.html      goldene Doppelspirale
+  Strata     oberflaechen/strata.html     schwebende Schichten aus
+                                          Lichtpunkten
+  Blüte      oberflaechen/bluete.html     Datenbaum: Stamm aus Linien,
+                                          Krone aus Blasen
+
+Außerdem:
+  Galaxie       oberflaechen/galaxie.html        Spiralgalaxie aus Sternen
+  Multiversum   oberflaechen/multiversum.html    viele Universen als Blasen,
+                                                 verbunden durch Lichtfäden
+  Avatar        oberflaechen/avatar.html         ein Gesicht, das sich aus
+                                                 Sternen formt. Es dreht den
+                                                 Kopf, folgt dem Mauszeiger,
+                                                 blinzelt und bewegt beim
+                                                 Sprechen den Mund
+  Singularität  oberflaechen/singularitaet.html  schwarzes Loch mit Scheibe
+  Synapse       oberflaechen/synapse.html        feines Netz aus Nervenzellen
+  Ozean         oberflaechen/ozean.html          Meer aus Lichtpunkten, Sonne
+  Tesserakt     oberflaechen/tesserakt.html      vierdimensionaler Würfel
+  Reaktor       oberflaechen/reaktor.html        Energiekern mit Ringen
+
+Außerdem:
+  Retro         oberflaechen/retro.html          Arbeitsübersicht im Stil
+                                                 eines UML-Klassendiagramms:
+                                                 Jarvis und jeder Bot als
+                                                 Kasten mit Werten, verbunden
+                                                 durch Linien. Die Kästen
+                                                 bewegen sich nicht von
+                                                 selbst, du schiebst sie mit
+                                                 der Maus an ihren Platz.
+                                                 Arbeitet ein Bot, laufen
+                                                 Lichtpunkte über seine Linie.
+
+Außerdem:
+  Avatar        oberflaechen/avatar.html         Gesicht aus tausenden
+                                                 leuchtenden Würfeln mit
+                                                 Licht und Schatten. Die
+                                                 Ränder zerfallen. Dreht
+                                                 sich zur Maus, blinzelt,
+                                                 öffnet beim Sprechen den
+                                                 Mund.
+  Phantom       oberflaechen/phantom.html        gesichtslose Gestalt aus
+                                                 weichen Sternpunkten:
+                                                 leuchtender Umriss,
+                                                 gefüllter Schatten.
+
+Außerdem:
+  Kosmos 3D     oberflaechen/kosmos.html         echtes 3D mit WebGL
+                                                 (Prototyp): Kugel aus
+                                                 Punkten mit Scheibe und
+                                                 Ringen. Maus bewegen dreht
+                                                 die Kamera, Punkte weichen
+                                                 aus, Klick sendet eine
+                                                 Welle. Braucht WebGL, das
+                                                 jeder aktuelle Browser hat.
+
+Maus-Effekte (alle Oberflächen):
+  Partikel weichen dem Zeiger aus, folgen ihm oder kreisen um ihn.
+  Klick auf freie Fläche sendet eine Welle. Die Ansicht neigt sich
+  leicht zum Zeiger. Abschalten: Einstellungen -> Oberfläche
+  ("Maus-Effekte" und "Kippen"). Bei Retro sind sie aus.
+
+Fenster und Knöpfe sehen in jeder Oberfläche gleich aus (Milchglas).
+Nur die Figur in der Mitte und die Farben ändern sich.
+
+Wechseln: Einstellungen -> Oberfläche, per Sprache ("Wechsel die
+Oberfläche auf Nova") oder direkt die Adresse aufrufen, z.B.
+  http://localhost:5050/oberflaechen/nova.html
+http://localhost:5050 öffnet immer die zuletzt gewählte Oberfläche.
+
+Jede Oberfläche reagiert auf vier Zustände:
+  Bereit · Hört zu · Denkt nach · Spricht
+
+
+---------------------------------------------------------------------
+13. ORDNER UND DATEIEN
+---------------------------------------------------------------------
+  Jarvis/
+    start.bat             Start unter Windows (Doppelklick)
+    start.sh              Start unter Mac/Linux
+    server.py             der Server: verbindet Oberfläche und KI
+    jarvis.html           Hauptoberfläche (Vortex)
+    oberflaechen/         die 24 weiteren Oberflächen
+    core/core.js          gemeinsame Technik aller Oberflächen
+    core/bots.js          die kreisenden Bots und der Reiter "Bots"
+    core/maus.js          Maus-Effekte für alle Oberflächen
+    core/klang.js         Hintergrundklang und Effekt-Töne (Ordner sounds)
+    core/widgets.js       Widgets: Wetter, Notizen, Uhr, System, Kosten
+    sounds/               Klangdateien (mp3), austauschbar
+    oberflaechen/vorschau/  Vorschaubilder der Oberflächen
+    core/pc.js            Reiter "PC-Steuerung" und die Nachfrage-Karte
+    core/core.css         gemeinsames Aussehen (Milchglas), Chat, Einstellungen
+    anleitung.txt         diese Datei
+    einstellungen.json    entsteht beim ersten Start (deine Einstellungen
+                          und Schlüssel)
+    gedaechtnis.json      entsteht beim ersten "Merk dir" (Gedächtnis)
+    bot_statistik.json    entsteht, sobald ein Bot gearbeitet hat. Darin
+                          stehen die letzten Aufgaben und Ergebnisse der
+                          Bots im Klartext (abschaltbar, siehe Abschnitt 15)
+    kosten.json           entsteht mit der ersten KI-Anfrage: Token und
+                          Kosten je Tag und Modell (keine Inhalte)
+    einstellungen.beispiel.json   nur zum Nachschlagen: alle Einstellungen
+                          mit Standardwerten. Wird vom Programm nicht gelesen.
+
+Für Programmierer, wo was im Code steht (server.py):
+  stream_ollama()   Anbindung Ollama  (POST /api/chat)
+  stream_claude()   Anbindung Claude  (POST /v1/messages)
+  stream_openai()   Anbindung OpenAI-kompatibel (POST /chat/completions)
+  route()           erkennt Befehle (Timer, Webseite, Briefing ...)
+  privat_erkennen() erkennt private Daten für die Privat-Weiche
+  run_chat()        entscheidet, ob eine Nachricht lokal oder in die
+                    Cloud geht, und ob ein Bot sie übernimmt
+  bot_finden()      erkennt, welcher Bot angesprochen ist
+  bot_lauf()        lässt einen Bot arbeiten
+  bot_ziel()        Datenschutz-Prüfung für Bots
+  ki_stream()       eine Stelle für alle Anbieter: zählt Token, hält
+                    das Kostenlimit ein
+  kosten_buchen()   schreibt den Verbrauch nach kosten.json
+  PREISE            Listenpreise der Claude-Modelle
+  ha_befehl()       erkennt Sätze für Home Assistant
+  ha_dienst()       ruft einen Dienst in Home Assistant auf
+  adresse_art()     unterscheidet eigenen PC, Heimnetz und Internet
+  pc_aktion()       prüft, fragt nach und führt eine PC-Aktion aus
+  pc_pfad()         stellt sicher, dass ein Pfad in einem freigegebenen
+                    Ordner liegt
+  system_prompt()   die Persönlichkeit von Jarvis
+  DEFAULTS          alle Einstellungen mit Standardwerten
+Eigene Skripte gegen die API: Schreibende Anfragen (POST) brauchen die
+Kopfzeile  X-Jarvis: 1  und Content-Type: application/json.
+Anderer Port: Umgebungsvariable JARVIS_PORT setzen (Standard 5050).
+Ist 5050 belegt, nimmt Jarvis automatisch 5051 bis 5059 und zeigt die
+Adresse im schwarzen Fenster an.
+
+
+---------------------------------------------------------------------
+14. FEHLERBEHEBUNG
+---------------------------------------------------------------------
+>> VON TEIL 1 (Ollama) ZU TEIL 2 (API) GEWECHSELT, JETZT GEHT NICHTS?
+   Diese Version kann beides. Prüfe der Reihe nach:
+   a) Wurde start.bat gestartet und ist das schwarze Fenster offen?
+   b) Steht in der Adresszeile  http://localhost:5050  (nicht file:///)?
+   c) Oben rechts: welche Gruppe ist ausgewählt? Für die API muss ein
+      Modell unter "Claude · API" oder "OpenAI-kompatibel" gewählt sein.
+   d) Einstellungen -> KI & Modelle -> "Verbindung testen". Der Text
+      daneben sagt genau, was fehlt.
+   e) Läuft noch ein alter Jarvis aus Teil 1 oder 2? Dann ist der Port
+      evtl. belegt. Alle schwarzen Fenster schließen und neu starten.
+
+>> "Ollama nicht erreichbar"
+   - Ollama starten (Startmenü) oder in cmd:  ollama serve
+   - Test im Browser:  http://localhost:11434  -> "Ollama is running"
+   - Andere Adresse? In den Einstellungen unter "Ollama -> Adresse".
+
+>> OLLAMA LÄUFT UNTER WSL (Linux in Windows)
+   Normalerweise erreicht Windows ein Ollama in WSL über localhost.
+   Klappt es nicht:
+   - In WSL starten mit:  OLLAMA_HOST=0.0.0.0 ollama serve
+   - In WSL die Adresse anzeigen:  hostname -I
+   - In Jarvis als Ollama-Adresse eintragen:  http://DIESE-ADRESSE:11434
+   Einfacher: Ollama direkt unter Windows installieren.
+   Achtung: Laufen Ollama unter Windows UND in WSL gleichzeitig, kämpfen
+   beide um Port 11434. Eins davon beenden.
+
+>> "Modell ... ist nicht installiert"
+   In cmd:  ollama pull MODELLNAME   (genau so, wie es in der Meldung steht)
+
+>> "Python wurde nicht gefunden"
+   Python von https://www.python.org installieren. Beim Installieren
+   unbedingt den Haken bei "Add python.exe to PATH" setzen.
+   Danach start.bat erneut starten.
+
+>> Claude: "Schlüssel ungültig" / "Kein Guthaben"
+   - Schlüssel komplett kopiert? Beginnt mit sk-ant- ?
+   - Guthaben in https://console.anthropic.com aufgeladen?
+     Ein Claude-Pro-Abo zählt nicht als API-Guthaben.
+
+>> Kleine lokale Modelle antworten komisch oder auf Englisch
+   Größeres Modell nehmen (siehe Abschnitt 3) oder in den Einstellungen
+   unter "Persönlichkeit" ergänzen: "Antworte immer auf Deutsch."
+
+>> Keine Stimme
+   - Einmal auf die Seite klicken (Browser erlauben Ton erst nach einem
+     Klick).
+   - Einstellungen -> Stimme -> "Stimme testen".
+   - Windows-Lautstärke und Browser-Tab nicht stumm?
+
+>> Mikrofon geht nicht / Knopf ist ausgegraut
+   - Chrome oder Edge nutzen.
+   - Adresse muss http://localhost:5050 sein.
+   - Links in der Adresszeile auf das Schloss/Symbol klicken ->
+     Mikrofon "Zulassen". Danach Seite neu laden.
+   - Hinweis "Spracherkennung braucht Internet": Verbindung prüfen.
+   - Belegt ein anderes Programm (z.B. OBS) das Mikrofon exklusiv?
+
+>> Jarvis hört sich selbst und antwortet sich
+   Mikrofon-Modus "An, wenn fertig gesprochen" oder Headset nutzen.
+
+>> Die Animation ruckelt
+   Andere Oberfläche probieren (Begleiter und Gitter sind am leichtesten).
+   In Chrome: Einstellungen -> System -> "Grafikbeschleunigung
+   verwenden, wenn verfügbar" einschalten.
+
+>> Einstellungen völlig verstellt
+   Jarvis beenden, einstellungen.json löschen, neu starten.
+   (Schlüssel danach neu eintragen.)
+
+
+---------------------------------------------------------------------
+15. DATENSCHUTZ: WAS VERLÄSST MEINEN PC?
+---------------------------------------------------------------------
+Kurz gesagt: Mit Ollama bleiben die KI-Anfragen auf deinem PC. Mit
+Claude oder OpenAI gehen sie an den Anbieter. Jarvis hilft dir dabei,
+private Dinge trotzdem lokal zu halten.
+
+Oben rechts neben der Modellauswahl zeigt eine Anzeige, wo du gerade
+bist:
+  LOKAL         die KI läuft auf deinem PC oder in deinem eigenen
+                Heimnetz (Ollama, LM Studio). Geprüft wird die echte
+                Adresse: Nur dein PC (localhost, 127.0.0.1) und
+                private Netzadressen (192.168.x.x, 10.x.x.x, name.local)
+                gelten als lokal.
+  CLOUD         die KI läuft beim Anbieter (Claude, OpenAI ...)
+  STRIKT LOKAL  nichts verlässt den PC
+  🔒 LOKAL BEANTWORTET   eine private Nachricht wurde lokal beantwortet
+Ein Klick darauf öffnet die Datenschutz-Einstellungen.
+
+Einstellungen -> Datenschutz:
+
+  PRIVAT-WEICHE (Standard: an)
+  Ist eine Cloud-KI gewählt und deine Nachricht enthält private Daten,
+  beantwortet Ollama sie stattdessen lokal. Im Chat steht dann:
+     "🔒 Erkannt: Telefonnummer · lokal beantwortet von ..."
+  Erkannt werden:
+     Telefonnummern, E-Mail-Adressen, IBAN, Kartennummern, Adressen,
+     Postleitzahl mit Ort, API-Schlüssel, und Wörter wie Passwort, PIN,
+     TAN, Diagnose, Arzt, Medikament, Kontostand, Gehalt, Steuer-ID,
+     Ausweisnummer.
+     Außerdem alles, was mit "privat:" beginnt, z.B.
+        privat: Wie spreche ich das Thema mit meinem Chef an?
+     und deine EIGENEN STICHWÖRTER (z.B. Namen aus der Familie).
+  Läuft Ollama nicht, schickt Jarvis die Nachricht NICHT in die Cloud,
+  sondern sagt Bescheid. Mit "Trotzdem an die Cloud senden" kannst du
+  sie bewusst doch schicken.
+  Private Nachrichten und ihre Antworten werden auch später nicht als
+  Gesprächsverlauf an die Cloud geschickt.
+
+  EHRLICH: Die Erkennung arbeitet mit Mustern und Wortlisten. Nummern,
+  E-Mails und IBANs findet sie zuverlässig. Einen Satz wie "meiner
+  Mutter geht es schlecht" erkennt sie nicht sicher. Für so etwas
+  "privat:" davorschreiben oder gleich lokal arbeiten.
+
+  GEDÄCHTNIS AN CLOUD-KI SENDEN (Standard: aus)
+  Aus: Dein Gedächtnis bleibt auf dem PC. Claude/OpenAI kennen deine
+  Notizen dann nicht, sie können z.B. beim Briefing nicht sagen, was
+  heute ansteht. "Merk dir ..." und "Vergiss ..." funktionieren
+  trotzdem, Jarvis erledigt sie lokal und schickt nichts weg.
+  An: Das Gedächtnis geht bei JEDER Anfrage an den Cloud-Anbieter mit.
+
+  STRIKT LOKAL (Standard: aus)
+  Nichts verlässt deinen PC. Gesperrt werden: Claude, OpenAI, ElevenLabs,
+  Wetter, Websuche und die Spracheingabe des Browsers. Jarvis nutzt nur
+  Ollama und nur Stimmen, die auf deinem PC installiert sind.
+  Du musst dann tippen.
+
+Was in den anderen Modi den PC verlässt, auch mit Ollama:
+  - SPRACHEINGABE: Die Spracherkennung von Chrome und Edge läuft über
+    einen Online-Dienst des Browsers (Chrome: Google, Edge: Microsoft).
+    Wer das nicht will: tippen oder "Strikt lokal".
+  - STIMME: Mit ElevenLabs geht der gesprochene Text an ElevenLabs.
+    Browser-Stimmen mit "Online" oder "Natural" im Namen laufen über
+    Server von Microsoft bzw. Google. Die Windows-Stimmen ohne diesen
+    Zusatz laufen lokal.
+  - WETTER: Nur der Ortsname geht an Open-Meteo.
+  - WEBSUCHE (nur Claude): Claude sucht bei Bedarf im Web.
+    Standardmäßig AUS, weil jede Suche extra kostet.
+  - HOME ASSISTANT (Abschnitt 22): Schaltbefehle gehen an die Adresse,
+    die du eingetragen hast. Standardmäßig AUS.
+  - WEBHOOK-ROUTINEN: rufen die Adresse auf, die du in der Routine
+    eingetragen hast.
+
+WAS AUF DER FESTPLATTE LANDET (verlässt den PC nicht, steht aber im
+Klartext auf deiner Platte):
+  einstellungen.json   deine Einstellungen, alle API-Schlüssel und der
+                       Token für Home Assistant
+  gedaechtnis.json     was Jarvis sich über dich gemerkt hat
+  bot_statistik.json   die letzten 8 Aufgaben jedes Bots mit Uhrzeit,
+                       Dauer und einem Auszug der Antwort. Private
+                       Aufgaben (Privat-Weiche) werden NICHT gespeichert.
+                       Abschalten und löschen: Einstellungen -> Bots ->
+                       "Verlauf mitschreiben" bzw. "Verlauf löschen".
+  kosten.json          Token und Kosten je Tag und Modell. Keine Texte,
+                       keine Fragen, keine Antworten.
+  *.bak                Sicherung, wenn die PC-Steuerung eine vorhandene
+                       Textdatei ersetzt hat (siehe Abschnitt 20)
+  - BOTS: Nutzt ein Bot eine Cloud-KI, geht seine Aufgabe an diesen
+    Anbieter. Privat-Weiche und "Strikt lokal" gelten auch für Bots
+    (siehe Abschnitt 18).
+
+Unter Einstellungen -> Datenschutz -> "Was verlässt gerade deinen PC?"
+siehst du das live für deine aktuellen Einstellungen.
+
+Was Claude, OpenAI und Co. mit den Daten machen, regeln deren
+Datenschutz- und Nutzungsbedingungen. Die solltest du lesen, bevor du
+dort Persönliches eingibst.
+
+
+---------------------------------------------------------------------
+16. SICHERHEIT
+---------------------------------------------------------------------
+  - Jarvis ist nur von deinem eigenen PC aus erreichbar (127.0.0.1).
+    Andere Geräte im Netzwerk kommen nicht dran.
+  - Schlüssel stehen im Klartext in einstellungen.json. Diese Datei
+    NIEMALS weitergeben, hochladen oder in Videos zeigen.
+  - Beim Teilen des Ordners (z.B. GitHub) einstellungen.json,
+    gedaechtnis.json, bot_statistik.json und kosten.json weglassen. Die beiliegende .gitignore macht das
+    bei Git automatisch.
+  - Auch die API-Schlüssel einzelner Bots stehen in einstellungen.json.
+  - Jarvis nimmt nur Anfragen an, die von seiner eigenen Seite kommen.
+    Andere Webseiten im Browser können ihn nicht fernsteuern. Dafür
+    sorgen drei Prüfungen bei jeder schreibenden Anfrage:
+      1. Die Adresse muss localhost oder 127.0.0.1 mit genau dem Port
+         sein, auf dem Jarvis läuft (schützt vor DNS-Rebinding, also
+         vor fremden Adressen, die heimlich auf 127.0.0.1 zeigen).
+      2. Wird ein Origin mitgeschickt, muss er genau dieser Adresse
+         entsprechen. Auch ein anderer Dienst auf deinem eigenen
+         Rechner darf Jarvis also nicht steuern.
+      3. Jede schreibende Anfrage braucht den Kopfzeilen-Eintrag
+         X-Jarvis: 1. Eine fremde Seite darf den nur nach einer
+         CORS-Vorabfrage setzen, und die beantwortet Jarvis mit 403.
+    Danke an Pascal für den Hinweis auf diese Lücke in Version 1.1.
+  - PC-Steuerung: siehe Abschnitt 20. Sie ist standardmäßig aus.
+  - Schutz-Kopfzeilen bei jeder Antwort: Keine fremde Seite kann
+    Jarvis unsichtbar einbetten und dir Klicks unterschieben
+    (X-Frame-Options, frame-ancestors). Die Oberfläche darf nur von
+    Jarvis selbst laden und nur an Jarvis senden
+    (Content-Security-Policy). Selbst wenn jemand fremden Code in die
+    Seite bekäme, könnte der deine Schlüssel nicht nach außen schicken.
+  - Der Server liefert nur Dateien aus den Ordnern core, oberflaechen
+    und sounds aus, dazu jarvis.html. server.py, einstellungen.json
+    und alles andere im Ordner sind über den Browser nicht abrufbar.
+  - "Lokal" wird an der echten Adresse geprüft. Eine Adresse wie
+    localhost.irgendwas.com zählt als Internet, nicht als lokal.
+  - Hat ein Bot eine eigene Adresse, bekommt diese Adresse nie den
+    Hauptschlüssel von Jarvis, nur den Schlüssel des Bots.
+  - Skripte (.py, .bat, .ps1, .sh, .js) schreibt Jarvis nie ohne
+    Nachfrage und startet sie nie (Abschnitt 20).
+  - Auf Linux und macOS darf nur dein Benutzer einstellungen.json,
+    gedaechtnis.json und kosten.json lesen.
+  - Home Assistant: Schlösser und Alarmanlagen sind absichtlich nicht
+    freigegeben (Abschnitt 22).
+  - EHRLICH: Jarvis ist ein Hobby-Projekt ohne Gewähr. Es wurde
+    sorgfältig geprüft, eine Garantie auf Fehlerfreiheit gibt es
+    nicht. Nutzung auf eigene Verantwortung. Wer eine Lücke findet:
+    bitte direkt melden, nicht öffentlich posten.
+  - Im Stream: Einstellungen nicht offen zeigen, wenn Schlüssel
+    eingetragen sind. Angezeigt werden zwar nur die letzten 4 Zeichen,
+    aber sicher ist sicher.
+  - Was bei welcher Einstellung den PC verlässt: siehe Abschnitt 15.
+
+
+---------------------------------------------------------------------
+17. FÜR BASTLER: EIGENE OBERFLÄCHE BAUEN
+---------------------------------------------------------------------
+Kopiere eine Datei aus "oberflaechen", z.B. band.html, und ändere den
+Teil in Jarvis.registerTheme({...}):
+
+  Jarvis.registerTheme({
+    id: "meinname",
+    init(J)  { ... einmal beim Start ... },
+    resize(breite, hoehe) { ... bei Größenänderung ... },
+    draw(ctx, breite, hoehe, S) { ... jedes Bild (ca. 60 pro Sekunde) ... }
+  });
+
+Was in S steht (alles Zahlen):
+  S.level   Lautstärke der Stimme 0..1  (springt beim Sprechen)
+  S.mic     Lautstärke deines Mikrofons 0..1
+  S.speak   0..1  weicher Übergang "spricht"
+  S.think   0..1  weicher Übergang "denkt nach"
+  S.listen  0..1  weicher Übergang "hört zu" (0.35 = Mikro an, still)
+  S.pulse   0..1  kurzer Impuls bei Ereignissen
+  S.t       Zeit in Sekunden,  S.dt  Zeit seit dem letzten Bild
+Ereignisse:  J.on("state" | "sentence" | "module" | "event" | "message", fn)
+Hilfen:      J.sprite(r,g,b) leuchtender Punkt,  J.glowAt(ctx,sprite,x,y,größe,alpha)
+Akzentfarbe: in <style> :root{ --ac:#hex; --ac-rgb:r,g,b }
+
+Neue Oberfläche in die Liste der Einstellungen aufnehmen:
+  core/core.js -> J.THEMES  und  server.py -> THEMES
+
+Maus: Alle Partikel, die du mit J.glowAt zeichnest, reagieren
+automatisch auf den Zeiger. Im registerTheme({...}) stellst du ein:
+  maus: "abstossen" | "anziehen" | "wirbel" | "aus"   (Standard: abstossen)
+  kippen: false     schaltet das leichte Neigen der Ansicht ab
+Eine eigene Maussteuerung (wie Retro) setzt  maus: "aus"  und bots: "eigene".
+Für echtes 3D mit WebGL siehe oberflaechen/kosmos.html: eine eigene
+<canvas> hinter der Zeichenfläche, draw() leert nur die 2D-Ebene.
+Die geglättete Mausposition steht in J.maus (sx, sy, an, waves).
+
+Bots: Damit die Bots um die Mitte DEINER Figur kreisen, melde in
+resize() Mittelpunkt und Radius:   J.orbit = { x: cx, y: cy, r: R };
+Ohne diese Zeile kreisen sie um die Bildmitte. Auf Bot-Ereignisse
+reagieren:  J.on("bot", e => ...)   e.phase ist "start" oder "ende".
+
+
+---------------------------------------------------------------------
+18. BOTS: DEIN EIGENES KI-TEAM
+---------------------------------------------------------------------
+Ein Bot ist ein eigener KI-Helfer mit festem Auftrag, z.B. "Recherche",
+"Coder" oder "Texter". Jeder Bot kann eine andere KI nutzen als Jarvis:
+ein anderes Modell, einen anderen Anbieter und einen eigenen
+API-Schlüssel. So kann Jarvis z.B. lokal mit Ollama laufen und nur der
+Recherche-Bot nutzt Claude mit Websuche.
+
+BOT ANLEGEN (dauert eine Minute)
+  1. Einstellungen -> Bots
+  2. Unter "Bot hinzufügen" eine Vorlage anklicken (Recherche, Coder,
+     Texter, Übersetzer, Planer, Analyst) oder "Leerer Bot".
+  3. Name, Kurzbeschreibung und Auftrag anpassen.
+  4. "KI des Bots":
+       Wie Jarvis          nutzt die KI und den Schlüssel von Jarvis.
+                           Dafür muss nichts weiter eingetragen werden.
+       Ollama / Claude /   eigener Anbieter. Schlüssel leer lassen =
+       OpenAI-kompatibel   der Schlüssel aus "KI & Modelle" wird genutzt.
+                           Schlüssel eintragen = nur dieser Bot nutzt ihn.
+     "Verbindung testen" zeigt, ob es klappt, und füllt die Modell-Liste.
+  5. Aussehen wählen: Form (Kugel, Würfel, Diamant, Pyramide, Kristall,
+     Ring, Stern, Atom, Plasma), Farbe und angezeigte Größe.
+  6. "Speichern". Der Bot erscheint sofort auf der Oberfläche.
+
+BOTS AUF DER OBERFLÄCHE
+  - Aktive Bots kreisen im Uhrzeigersinn um die Mitte von Jarvis.
+    Über jedem Bot steht sein Name.
+  - Maus über einen Bot: Der Bot bleibt stehen, solange die Maus auf ihm
+    liegt, und eine Info-Karte zeigt Aufgabe, KI, Modell, lokal oder
+    Cloud, die Zahl der erledigten Aufgaben und die letzten Aufgaben,
+    die er verarbeitet hat (mit Ergebnis).
+  - Klick auf einen Bot: öffnet sein DASHBOARD mit zwei Reitern.
+      Übersicht      Status, KI, Modell, Auftrag und die Liste dessen,
+                     was der Bot verarbeitet hat, mit Uhrzeit, Dauer und
+                     Ergebnis. "Aufgabe geben" schreibt @Name ins
+                     Eingabefeld.
+      Einstellungen  Name, Auftrag, Stichwörter, KI, Modell, Schlüssel,
+                     Form, Farbe und Größe direkt ändern und speichern.
+    Das Dashboard lässt sich am Kopf verschieben und mit Esc schließen.
+  - Gedrückt halten und ziehen: Bot verschieben. Wo du ihn loslässt,
+    kreist er weiter (näher oder weiter weg von der Mitte). Die Bahn
+    merkt sich der Browser.
+  - Arbeitet ein Bot, leuchtet eine Leitung zwischen ihm und Jarvis.
+  - In der Oberfläche "Retro" sind die Bots keine Kugeln, sondern Kästen
+    in einem Diagramm. Auch dort zeigt die Maus die Info-Karte und ein
+    Klick das Dashboard.
+  - Größe aller Bots, Umlauf-Tempo, Namen ein/aus und Bots ganz
+    ausblenden: Einstellungen -> Bots -> "Anzeige & Verhalten".
+
+EINEN BOT ANSPRECHEN (funktioniert mit jedem Modell)
+  "@Recherche was ist ein Quantencomputer?"
+  "Coder, schreib mir ein Python-Skript, das Dateien umbenennt"
+  "Frag den Analyst, was er von dem Plan hält"
+  Oder über ein Stichwort, das du beim Bot hinterlegt hast, z.B.
+  "recherchiere": Fällt das Wort im Satz, übernimmt der Bot.
+  Die Antwort kommt direkt vom Bot und ist im Chat mit seinem Namen
+  markiert.
+
+JARVIS DELEGIERT SELBST (Einstellungen -> Bots -> "Selbst delegieren")
+  Jarvis kennt sein Team und kann eine Aufgabe von sich aus an den
+  passenden Bot abgeben. Der Bot arbeitet, Jarvis fasst das Ergebnis
+  zusammen.
+  EHRLICH: Das klappt mit großen Modellen (Claude, GPT) zuverlässig.
+  Kleine lokale Modelle delegieren selten oder gar nicht. Dann einfach
+  @Name oder ein Stichwort benutzen, das geht immer.
+  Eine delegierte Aufgabe kostet drei KI-Aufrufe statt einem (Jarvis,
+  Bot, Jarvis). Bei API-Abrechnung also etwas teurer.
+
+GRENZEN (damit keine falschen Erwartungen entstehen)
+  - Bots sind Sprachmodelle mit eigenem Auftrag. Sie können antworten,
+    schreiben, übersetzen, planen und (mit Claude) im Web suchen. Sie
+    können NICHT selbstständig Dateien anlegen, Programme starten oder
+    den PC steuern.
+  - Ein delegierter Bot kennt das bisherige Gespräch nicht, nur die
+    Aufgabe, die Jarvis ihm gibt. Ein direkt angesprochener Bot sieht
+    den bisherigen Verlauf.
+  - Bots haben keinen Zugriff auf das Gedächtnis von Jarvis.
+  - Websuche gibt es für Bots nur mit Claude.
+  - Höchstens 24 Bots.
+
+DATENSCHUTZ BEI BOTS
+  - In der Info-Karte steht bei jedem Bot LOKAL oder CLOUD.
+  - Privat-Weiche: Enthält eine Nachricht an einen Cloud-Bot private
+    Daten, beantwortet Ollama sie lokal im Namen des Bots. Läuft Ollama
+    nicht, wird nichts gesendet.
+  - Strikt lokal: Alle Bots arbeiten nur mit Ollama.
+  - Private Aufgaben werden nicht in bot_statistik.json gespeichert.
+
+FEHLER BEI BOTS
+  >> Bot antwortet nicht / Fehler in der Info-Karte
+     Einstellungen -> Bots -> Bot anklicken -> "Verbindung testen".
+     Der Text daneben sagt, was fehlt (Schlüssel, Modell, Adresse).
+  >> Jarvis gibt nie etwas an Bots ab
+     Größeres Modell wählen oder @Name bzw. Stichwörter nutzen.
+  >> Ein Bot springt an, obwohl ich ihn nicht meine
+     Seine Stichwörter sind zu allgemein. Enger fassen oder löschen.
+  >> Bots stören im Stream
+     Einstellungen -> Bots -> "Bots anzeigen" ausschalten. Sie arbeiten
+     dann weiter, sind aber unsichtbar.
+
+
+---------------------------------------------------------------------
+19. WAS IST NEU IN 2.0?
+---------------------------------------------------------------------
+Gegenüber Version 1.x (Teil 1 und das Sicherheits-Update 1.2):
+
+  KI und Kosten
+  - Sparmodus (an): kürzerer Verlauf, knappes Gedächtnis, Befehle wie
+    Timer ohne KI-Rückfrage, Bots antworten direkt
+  - Websuche standardmäßig aus (kostet je Suche extra)
+  - Monatslimit in US-Dollar: Ist es erreicht, sendet Jarvis nichts
+    mehr an eine Cloud-KI
+  - Kosten-Widget: Verbrauch heute und im Monat, Limit, Guthaben
+
+  Bots
+  - Eigenes KI-Team: jeder Bot mit Auftrag, Modell, Schlüssel und
+    Adresse; ansprechen mit @Name, "Name, ..." oder Stichwort; Jarvis
+    kann selbst an Bots abgeben
+  - Bots kreisen sichtbar um Jarvis, 14 Formen, Dashboard je Bot
+
+  Oberflächen
+  - 25 Oberflächen (vorher 7), darunter Avatar und Kosmos 3D in WebGL
+    und Retro als Arbeitsübersicht
+  - Vorschaubilder in der Auswahl, Ladescreen beim Start
+  - Fenster in Milchglas-Optik, Maus-Effekte, Hintergrundklang
+  - Widgets: Wetter, Notizen, Uhr, System, Kosten
+
+  Steuerung
+  - PC-Steuerung: freigegebene Ordner und Programme, Textdateien und
+    Skripte lesen und schreiben, alles mit Nachfrage
+  - Home Assistant: Geräte per Sprache und Routine schalten
+  - Webhook-Routinen für eigene Automationen
+
+  Sicherheit und Datenschutz
+  - Schutz-Kopfzeilen gegen Einbetten und Datenabfluss
+  - Server liefert nur noch die Ordner der Oberfläche aus
+  - "Lokal" wird an der echten Adresse geprüft
+  - Chatverlauf löschbar oder abschaltbar
+
+Beim ersten Start von 2.0 wird ein Chatverlauf aus einer früheren
+Version einmalig verworfen. Einstellungen und Gedächtnis bleiben
+erhalten, wenn du einstellungen.json und gedaechtnis.json in den neuen
+Ordner kopierst.
+
+
+---------------------------------------------------------------------
+20. PC-STEUERUNG: ORDNER, DATEIEN, PROGRAMME
+---------------------------------------------------------------------
+Jarvis kann auf deinem PC arbeiten. Das ist STANDARDMÄSSIG AUS und du
+bestimmst genau, was er darf.
+
+WAS JARVIS KANN (nur nach Freigabe)
+  - Ordner ansehen            "Was liegt im Ordner Dokumente?"
+  - Ordner öffnen             "Öffne den Ordner Dokumente"
+  - Programme starten         "Starte Editor"
+  - Textdateien lesen         "Lies notizen.txt in Dokumente vor"
+  - Dateien öffnen            "Öffne die Präsentation im Ordner Arbeit"
+  - Textdateien schreiben     "Schreib eine Einkaufsliste in Dokumente"
+                              (eigener Schalter, siehe unten)
+  - Skripte schreiben         "Schreib mir ein Python-Skript, das alle
+                              Bilder im Ordner Fotos zählt, und speicher
+                              es in Dokumente als zaehlen.py"
+                              Möglich sind u.a. .py, .js, .bat, .ps1,
+                              .sh, .html, .css, .sql. Die Qualität hängt
+                              vom gewählten Modell ab.
+
+WAS JARVIS NICHT KANN (mit Absicht)
+  - Nichts löschen, nichts verschieben, nichts umbenennen.
+  - Keine freien Befehle, keine Kommandozeile. Skripte kann Jarvis
+    schreiben, aber NIE starten. Das machst du selbst, nachdem du
+    reingeschaut hast. Vor dem Schreiben eines Skripts fragt Jarvis
+    immer nach, auch wenn das Nachfragen sonst ausgeschaltet ist.
+  - Keine 3D-Modelle, Videos oder Bilder erstellen oder bearbeiten.
+    Jarvis ist ein Sprachassistent, kein Programmier-Agent wie Claude
+    Code oder Codex.
+  - Keine Maus- und Tastatursteuerung, kein Blick auf den Bildschirm.
+  - Nichts außerhalb der freigegebenen Ordner. Auch nicht über Umwege
+    wie ".." oder Verknüpfungen.
+  - Keine Programme, die nicht in deiner Liste stehen.
+  - Programme, Skripte und Verknüpfungen in freigegebenen Ordnern
+    werden nicht "geöffnet" (das würde sie starten).
+  - Keine neuen Ordner anlegen.
+  - Lesen und Schreiben nur bei Textdateien und Quelltext (txt, md,
+    csv, json, py, js, html ...).
+    Word, Excel und PDF kann Jarvis öffnen, aber nicht vorlesen.
+
+EINRICHTEN
+  1. Einstellungen -> PC-Steuerung
+  2. Hauptschalter "PC-Steuerung" einschalten.
+  3. "+ Ordner freigeben": Es öffnet sich das normale Auswahlfenster von
+     Windows. Ordner wählen. Der Name daneben ist das Wort, das du
+     später sagst ("Dokumente", "Arbeit", "Videos").
+     Öffnet sich kein Auswahlfenster, den Pfad einfach eintippen.
+     Tipp: Gib lieber einen eigenen Arbeitsordner frei als ganze
+     Laufwerke.
+  4. "+ Programm freigeben" oder einen Vorschlag anklicken (Editor,
+     Rechner, Explorer, Paint). Für eigene Programme über "..." die
+     .exe oder eine Verknüpfung wählen.
+     Grüner Punkt = gefunden. Gelber Punkt = nicht gefunden (manche
+     Windows-Programme starten trotzdem).
+  5. "Speichern".
+
+DIE SCHALTER
+  Nachfragen (Standard: an)
+    Vor jeder Aktion erscheint oben eine Karte: "Jarvis möchte etwas an
+    deinem PC tun" mit Erlauben und Ablehnen. Ohne Antwort wird nach
+    90 Sekunden abgelehnt. Wer Jarvis vertraut, kann das ausschalten.
+  Dateien schreiben (Standard: aus)
+    Jarvis darf Textdateien und Skripte anlegen und ändern. Ersetzt er eine
+    vorhandene Datei, bleibt die alte Fassung als .bak daneben liegen.
+  Cloud-KI (Standard: aus)
+    Aus: Ordnerlisten und Datei-Inhalte gehen NICHT an Claude, OpenAI
+    und Co. Lesen und Auflisten klappt dann nur mit einer lokalen KI
+    (Ollama). Öffnen und Starten geht immer, dabei verlässt nichts den
+    PC.
+    An: Was Jarvis liest, geht an den Cloud-Anbieter.
+
+WELCHES MODELL BRAUCHE ICH?
+  Mit JEDEM Modell (feste Befehle, Jarvis erkennt sie selbst):
+     "Starte <Name aus deiner Liste>"
+     "Öffne den Ordner <Name aus deiner Liste>"
+     "Was liegt im Ordner <Name aus deiner Liste>?"
+  Nur mit größeren Modellen (Claude, GPT, große lokale Modelle):
+     Dateien lesen, schreiben, bestimmte Dateien in Unterordnern finden
+     und öffnen, mehrere Schritte nacheinander.
+  EHRLICH: Kleine lokale Modelle (z.B. llama3.2) schaffen das oft nicht
+  sauber. Dann passiert nichts oder Jarvis sagt, dass es nicht ging.
+  Kaputt gehen kann dabei nichts.
+
+PROTOKOLL
+  Einstellungen -> PC-Steuerung -> Protokoll zeigt die letzten Aktionen
+  seit dem Start, auch abgelehnte und fehlgeschlagene.
+
+BOTS
+  Nur Jarvis selbst hat PC-Zugriff. Bots haben keinen.
+
+FEHLER BEI DER PC-STEUERUNG
+  >> "liegt in keinem freigegebenen Ordner"
+     Der Ordner fehlt in der Liste, oder der Name stimmt nicht.
+  >> "Ordnerlisten und Datei-Inhalte gebe ich nicht an eine Cloud-KI"
+     Schalter "Cloud-KI" einschalten oder auf Ollama wechseln.
+  >> Programm startet nicht
+     Über "..." die echte .exe oder die Verknüpfung auswählen.
+  >> Es kommt keine Nachfrage-Karte und nichts passiert
+     Das Modell hat die Aktion nicht sauber ausgelöst. Größeres Modell
+     nehmen oder einen der festen Befehle oben benutzen.
+
+Viel Spaß!
+
+
+---------------------------------------------------------------------
+21. KOSTEN: SPARMODUS, LIMIT UND KOSTEN-WIDGET
+---------------------------------------------------------------------
+Betrifft nur Claude und andere Dienste mit API-Schlüssel. Ollama kostet
+nichts.
+
+So wird abgerechnet: nach Token. Ein Token ist grob ein Wortteil. Bei
+jeder Frage gehen die Anweisungen an Jarvis, das Gedächtnis, der
+bisherige Verlauf und deine Frage hin (Eingabe) und die Antwort zurück
+(Ausgabe). Lange Gespräche werden deshalb mit jeder Runde teurer.
+
+SPARMODUS (Einstellungen -> KI & Modelle, Standard: an)
+  - Nur die letzten 8 Nachrichten gehen mit (sonst 20), ältere werden
+    gekürzt.
+  - Vom Gedächtnis gehen nur die neuesten Einträge mit.
+  - Reine Befehle wie "Timer 10 Minuten", "Öffne YouTube" oder "Merk
+    dir ..." bestätigt Jarvis selbst, ohne die KI zu fragen.
+  - Gibt Jarvis eine Aufgabe an einen Bot ab, antwortet der Bot direkt.
+    Ohne Sparmodus fasst Jarvis die Antwort noch einmal in eigenen
+    Worten zusammen, das ist ein KI-Aufruf mehr.
+Weitere Spartipps:
+  - Antwortlänge auf "Kurz" lassen.
+  - Websuche aus lassen. Bei Claude kostet jede Suche extra.
+  - Ein kleines Modell wählen (bei Claude ist Haiku das günstigste).
+  - Home-Assistant-Befehle und Routinen laufen ganz ohne KI.
+  - Für Privates und Alltägliches Ollama nutzen.
+
+MONATSLIMIT (Einstellungen -> KI & Modelle)
+  Betrag in US-Dollar, 0 = kein Limit. Ist das Limit im laufenden Monat
+  erreicht, sendet Jarvis nichts mehr an eine Cloud-KI und sagt das.
+  Ollama geht weiter.
+
+MEIN GUTHABEN
+  Trag ein, was beim Anbieter als Guthaben steht. Jarvis zieht ab dem
+  Moment den eigenen Verbrauch ab und zeigt den Rest im Widget.
+  EHRLICH: Das echte Guthaben kann kein Programm mit einem normalen
+  API-Schlüssel abfragen. Weder Anthropic noch OpenAI bieten das an.
+  Die Anzeige ist deshalb eine Rechnung, keine Abfrage. Wenn du den
+  Schlüssel auch woanders nutzt, stimmt sie nicht. Verbindlich ist die
+  Abrechnung beim Anbieter.
+
+PREISE
+  Für die Claude-Modelle sind die Listenpreise hinterlegt (Stand
+  13.11.2026, Quelle: platform.claude.com/docs/en/about-claude/pricing).
+  Preise ändern sich. Für OpenAI, Groq, OpenRouter und andere trägst du
+  sie selbst ein, je Zeile:
+     modellteil = eingabe / ausgabe      (US-Dollar je 1 Mio. Token)
+  Beispiel:  gpt-5 = 1.25 / 10
+  "modellteil" ist ein Stück des Modellnamens. Eigene Zeilen gehen vor
+  den hinterlegten Preisen. Ohne Preis zählt Jarvis nur die Token, und
+  das Widget weist darauf hin.
+
+KOSTEN-WIDGET (Einstellungen -> Oberfläche -> Widgets -> Kosten)
+  Zeigt: Kosten heute und im Monat, Balken zum Limit, Rest-Guthaben,
+  Anzahl der Anfragen und Token. Gezählt wird, was der Anbieter in
+  seiner Antwort als Verbrauch meldet. Meldet ein Anbieter nichts,
+  schätzt Jarvis (3,5 Zeichen je Token) und kennzeichnet das.
+  Die Zahlen stehen in kosten.json. Darin sind keine Texte.
+
+
+---------------------------------------------------------------------
+22. HOME ASSISTANT UND WEBHOOKS (Smart Home, für Bastler)
+---------------------------------------------------------------------
+Standardmäßig AUS. Gedacht für alle, die schon ein Home Assistant
+betreiben. Jarvis spricht mit dessen REST-API.
+
+EINRICHTEN (Einstellungen -> Automation -> Home Assistant)
+  1. In Home Assistant: unten links auf dein Profil -> Sicherheit ->
+     "Langlebige Zugriffstoken" -> Token erstellen und kopieren.
+  2. In Jarvis: "Home Assistant nutzen" einschalten, Adresse eintragen
+     (z.B. http://homeassistant.local:8123 oder http://192.168.1.50:8123)
+     und den Token einfügen.
+  3. "Speichern und Geräte anzeigen". Jarvis listet alle Geräte der
+     erlaubten Arten. Mit dem Knopf rechts schaltest du eins zum Testen
+     um.
+
+SPRECHEN
+  Jarvis erkennt das Gerät an seinem Namen aus Home Assistant. Nenne
+  den Namen so, wie er dort steht:
+     "Schalte das Wohnzimmerlicht an"
+     "Mach die Kaffeemaschine aus"
+     "Stehlampe auf 40 Prozent"
+     "Ist der Fernseher an?"
+     "Starte Kinoabend"                (Szene oder Skript)
+     "Fire TV pause" / "Fire TV weiter"
+     "Rollo Küche hoch" / "Rollo Küche runter"
+  Das läuft ohne KI: mit jedem Modell, sofort und ohne Token-Kosten.
+  Heißt ein Gerät in Home Assistant "Deckenleuchte EG 2", musst du es
+  auch so nennen. Tipp: den Geräten in Home Assistant sprechbare Namen
+  geben oder eine Routine anlegen.
+
+FIRE TV
+  Ist dein Fire TV in Home Assistant eingebunden (Integration "Android
+  Debug Bridge" oder "Fire TV"), erscheint es als media_player und
+  lässt sich an- und ausschalten, pausieren und fortsetzen.
+
+ROUTINEN (Einstellungen -> Automation -> Routinen)
+  Aktion "Home Assistant: dienst gerät", Wert zum Beispiel:
+     light.turn_on light.wohnzimmer
+     light.turn_on light.wohnzimmer {"brightness_pct": 30}
+     scene.turn_on scene.kinoabend
+     media_player.turn_off media_player.fire_tv
+  So bekommt ein beliebiger Satz ("Kino an") eine feste Wirkung.
+
+  Aktion "Webhook: Adresse aufrufen", Wert zum Beispiel:
+     http://homeassistant.local:8123/api/webhook/mein_webhook
+     http://192.168.1.60:1880/jarvis {"aktion": "gute nacht"}
+  Jarvis schickt einen POST an die Adresse, optional mit JSON dahinter.
+  Damit hängst du Node-RED, ioBroker, eigene Skripte oder eine
+  Home-Assistant-Automation mit Webhook-Auslöser an.
+
+ERLAUBTE GERÄTEARTEN
+  Standard: light, switch, scene, script, media_player, cover, fan,
+  input_boolean. Nur diese kann Jarvis schalten, auch per Routine.
+  Schlösser (lock) und Alarmanlagen (alarm_control_panel) stehen
+  absichtlich nicht drin. Wer sie einträgt, tut das auf eigene Gefahr:
+  Spracherkennung versteht auch mal etwas falsch.
+
+ALEXA
+  Eine direkte Verbindung zu Alexa hat Jarvis nicht. Der Weg führt über
+  Home Assistant: Was dort eingebunden ist, kann Jarvis schalten.
+
+SICHERHEIT
+  Der Token steht wie die API-Schlüssel im Klartext in
+  einstellungen.json und wird in der Oberfläche nur maskiert gezeigt.
+  Mit "Strikt lokal" ist Home Assistant nur über eine Adresse im
+  eigenen Netz erlaubt.
+  EHRLICH: Getestet ist die Schnittstelle gegen eine Nachbildung der
+  Home-Assistant-API, nicht gegen jede echte Installation. Meldet euch,
+  wenn etwas hakt.
+
+
+---------------------------------------------------------------------
+23. WIDGETS, KLANG UND MAUS
+---------------------------------------------------------------------
+WIDGETS (Einstellungen -> Oberfläche -> Widgets)
+  Kleine Fenster vorne auf der Oberfläche: Wetter, Notizen, Uhr,
+  System, Kosten. An der Titelleiste verschieben, an der Ecke unten
+  rechts größer oder kleiner ziehen, die Schrift wächst mit. Plätze und
+  Größen merkt sich der Browser. Das Kreuz blendet ein Widget aus.
+  Notizen: Der Text bleibt im Browser. "Merken" gibt jede Zeile ins
+  Gedächtnis von Jarvis.
+
+KLANG (Einstellungen -> Oberfläche -> Klang)
+  Leiser Hintergrund in Schleife und kurze Effekt-Töne, je mit Schalter
+  und Lautstärkeregler. Beim Sprechen wird der Hintergrund automatisch
+  leiser. Eigene Töne: Dateien im Ordner "sounds" austauschen (mp3,
+  gleicher Name).
+
+MAUS (Einstellungen -> Oberfläche)
+  Partikel weichen dem Zeiger aus, folgen ihm oder kreisen um ihn. Ein
+  Klick auf freie Fläche sendet eine Welle. Die Ansicht neigt sich
+  leicht zum Zeiger. Alles einzeln abschaltbar: "Maus-Effekte",
+  "Kippen", "Mauslinie".
+
+LADESCREEN
+  Beim Start zeigt Jarvis, was er gerade lädt. Steht bei "KI verbinden"
+  ein Ausrufezeichen, wurde keine KI gefunden: nach dem Start oben
+  links in die Einstellungen (Abschnitt 3 bis 5).
+

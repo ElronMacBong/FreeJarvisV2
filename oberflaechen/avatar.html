@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JARVIS · Avatar</title>
+<link rel="stylesheet" href="/core/core.css">
+<style>
+  /* Oberfläche 17 · AVATAR · Gesicht aus tausenden 3D-Würfeln (WebGL) */
+  :root{--ac:#4a8dff;--ac-rgb:74,141,255;--bg:#00020a}
+  html,body{background:#00020a}
+  #gl{position:fixed;inset:0;width:100vw;height:100vh;display:block;z-index:0;pointer-events:none}
+  #th-cap{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:5;text-align:center;pointer-events:none}
+  #th-cap h1{margin:0;font-size:12px;letter-spacing:.42em;font-weight:600;color:rgba(255,255,255,.88);padding-left:.42em}
+  #th-cap p{margin:6px 0 0;font-size:11px;color:var(--mut);letter-spacing:.2em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="th-cap"><h1 id="thName">JARVIS</h1><p id="thState">avatar · bereit</p></div>
+<script src="/core/core.js"></script>
+<script>
+(function () {
+  const J = window.Jarvis, $ = id => document.getElementById(id), TAU = Math.PI * 2;
+  const rnd = Math.random, clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  let cx = 0, cy = 0, R = 220, mx = 0, my = 0, W = 1, H = 1, DPR = 1;
+
+  /* =========================================================================
+     Gesichtsrelief. x nach rechts, y nach oben, z nach vorne.
+     Kinn bei y = -1.05, Mund -0.62, Nasenspitze -0.33, Augen +0.10, Brauen +0.27.
+     Jede Zeile formt ein Merkmal; positiv kommt nach vorne, negativ liegt tiefer.
+     ========================================================================= */
+  const g2 = (x, y, x0, y0, sx, sy) => { const a = (x - x0) / sx, b = (y - y0) / sy, q = a * a + b * b; return q > 18 ? 0 : Math.exp(-q * 0.5); };
+  const smooth = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+  let GRUND = 0;
+  function relief(x, y) {
+    const ax = Math.abs(x);
+    const q = 1 - (x / 0.79) * (x / 0.79) - ((y - 0.05) / 1.24) * ((y - 0.05) / 1.24);
+    if (q <= 0.012) return null;
+    let z = GRUND = 0.66 * Math.pow(q, 0.62);                        // Grundwölbung
+    z -= 0.10 * smooth((y - 0.45) / 0.5);                            // Stirn neigt sich zurück
+    z += 0.046 * g2(ax, y, 0.23, 0.285, 0.24, 0.080);                // Brauenwulst
+    z += 0.016 * g2(ax, y, 0.26, 0.262 + ax * 0.03, 0.17, 0.030);    // Braue als feiner Grat, außen leicht höher
+    z -= 0.010 * g2(ax, y, 0.26, 0.215, 0.17, 0.028);                // feine Rinne darunter
+    z -= 0.028 * g2(ax, y, 0.30, 0.44, 0.17, 0.12);                  // über der Braue zurück
+    z -= 0.098 * g2(ax, y, 0.268, 0.110, 0.150, 0.092);              // Augenhöhle
+    z += 0.090 * g2(ax, y, 0.262, 0.095, 0.100, 0.064);              // Augapfel unter dem Lid
+    z += 0.030 * g2(ax, y, 0.262, 0.160, 0.105, 0.040);              // Oberlid
+    z -= 0.013 * g2(ax, y, 0.262, 0.066, 0.100, 0.012);              // Lidspalt (geschlossene Augen wie bei einer Statue)
+    z -= 0.024 * g2(ax, y, 0.262, 0.030, 0.10, 0.034);               // Unterlid
+    z -= 0.042 * g2(ax, y, 0.455, 0.185, 0.10, 0.13);                // Schläfe
+    const nl = smooth((0.30 - y) / 0.26) * smooth((y + 0.46) / 0.14);
+    z += 0.170 * Math.exp(-Math.pow(ax / (0.058 + Math.max(0, -y) * 0.085), 2)) * nl;   // Nasenrücken
+    z += 0.140 * g2(ax, y, 0, -0.335, 0.076, 0.064);                 // Nasenspitze
+    z += 0.088 * g2(ax, y, 0.110, -0.345, 0.052, 0.050);             // Nasenflügel
+    z -= 0.075 * g2(ax, y, 0.060, -0.400, 0.032, 0.028);             // Nasenloch
+    z -= 0.055 * g2(ax, y, 0.160, -0.235, 0.060, 0.090);             // Furche neben der Nase
+    z -= 0.034 * g2(ax, y, 0, -0.495, 0.040, 0.045);                 // Philtrum
+    z += 0.056 * g2(ax, y, 0.080, -0.580, 0.135, 0.042);             // Oberlippe
+    z -= 0.050 * g2(ax, y, 0.090, -0.628, 0.160, 0.017);             // Mundspalt
+    z += 0.068 * g2(ax, y, 0.060, -0.680, 0.125, 0.046);             // Unterlippe
+    z -= 0.038 * g2(ax, y, 0.205, -0.628, 0.055, 0.055);             // Mundwinkel
+    z -= 0.034 * g2(ax, y, 0, -0.790, 0.13, 0.045);                  // Falte unter der Lippe
+    z += 0.066 * g2(ax, y, 0, -0.895, 0.165, 0.095);                 // Kinn
+    z += 0.050 * g2(ax, y, 0.425, -0.03, 0.135, 0.135);              // Wangenknochen
+    z -= 0.040 * g2(ax, y, 0.345, -0.40, 0.125, 0.135);              // Wange
+    z -= 0.032 * g2(ax, y, 0.47, -0.62, 0.11, 0.14);                 // Kieferwinkel
+    return z;
+  }
+  // Umriss: 1 innen, 0 außen; dazwischen zerfällt das Gesicht in einzelne Würfel
+  function maske(x, y) {
+    const a = x / 0.77, b = (y - 0.05) / (y > 0.05 ? 1.10 : 1.19);
+    const zack = 0.05 * Math.sin(Math.atan2(b, a) * 7 + 1.3) + 0.035 * Math.sin(Math.atan2(b, a) * 13);   // unregelmäßiger Rand
+    return clamp((1 + zack - Math.sqrt(a * a + b * b)) / 0.2, 0, 1);
+  }
+
+  /* ---------- Würfel einmal berechnen ---------- */
+  const D = 0.0185;                           // Kantenlänge eines Würfels im Modell
+  const INST = [];                            // je Würfel 17 Zahlen: Ort 3, Normale 3, (Schatten, Rand, Zufall, Kiefer), (Mund, Lid, Größe, Art), Drift 3
+  let ANZ = 0;
+  function bauen() {
+    const h = 0.012;
+    for (let iy = Math.round(-1.25 / D); iy * D <= 1.25; iy++) {
+      for (let ix = Math.round(-0.9 / D); ix * D <= 0.9; ix++) {
+        const x = ix * D, y = iy * D;
+        const m = maske(x, y); if (m <= 0.001) continue;
+        const z = relief(x, y); if (z === null) continue;
+        if (m < 1 && rnd() > m * 0.9 + 0.1) continue;                 // am Rand fehlen Würfel
+        const grund = GRUND;
+        const zx = relief(x + h, y), zy = relief(x, y + h);
+        let nx = zx === null ? 0 : -(zx - z) / h, ny = zy === null ? 0 : -(zy - z) / h, nz = 1;
+        const l = Math.hypot(nx, ny, nz); nx /= l; ny /= l; nz /= l;
+        const ao = clamp(1 + (z - grund) * 5.5, 0.22, 1.3);          // Vertiefungen liegen im Schatten
+        const zq = Math.round(z / D) * D;                            // in Stufen: das gibt die Höhenlinien aus Würfeln
+        let dx = 0, dy = 0, dz = 0;
+        if (m < 0.75 && rnd() < 0.75) {                              // Randwürfel lösen sich und treiben nach außen
+          const k = Math.pow(1 - m, 1.6) * (0.05 + rnd() * 0.42), a = Math.atan2(y, x) + (rnd() - 0.5) * 0.9;
+          dx = Math.cos(a) * k; dy = Math.sin(a) * k * 1.1; dz = (rnd() - 0.6) * k * 1.6;
+        }
+        INST.push(x, y, zq, nx, ny, nz, ao, m, rnd(), smooth((-0.44 - y) / 0.5),
+          g2(Math.abs(x), y, 0, -0.638, 0.165, 0.040), g2(Math.abs(x), y, 0.262, 0.105, 0.125, 0.085), 1, 0, dx, dy, dz);
+      }
+    }
+    for (let i = 0; i < 620; i++) {                                   // freie Würfel und goldene Funken ringsum
+      const a = rnd() * TAU, r = 0.78 + Math.pow(rnd(), 1.7) * 1.9, gold = rnd() < 0.09;
+      INST.push(Math.cos(a) * r * 1.0, Math.sin(a) * r * 1.2, (rnd() - 0.55) * 1.3, 0.2, 0.3, 0.93, 1, 0.5 + rnd() * 0.5, rnd(), 0,
+        0, 0, gold ? 0.35 + rnd() * 0.3 : 0.4 + Math.pow(rnd(), 2) * 0.9, gold ? 2 : 1, 0, 0, 0);
+    }
+    ANZ = INST.length / 17;
+  }
+
+  /* =========================================================================
+     WebGL: jeder Würfel wird einmal beschrieben und tausendfach gezeichnet.
+     ========================================================================= */
+  const cv = $("gl");
+  let gl = cv.getContext("webgl2", { antialias: true, alpha: false }) , inst = null, ok = false;
+  if (gl) inst = { div: (l, n) => gl.vertexAttribDivisor(l, n), draw: (m, f, c, n) => gl.drawArraysInstanced(m, f, c, n) };
+  else {
+    gl = cv.getContext("webgl", { antialias: true, alpha: false }) || cv.getContext("experimental-webgl");
+    const ex = gl && gl.getExtension("ANGLE_instanced_arrays");
+    if (ex) inst = { div: (l, n) => ex.vertexAttribDivisorANGLE(l, n), draw: (m, f, c, n) => ex.drawArraysInstancedANGLE(m, f, c, n) };
+  }
+
+  const VS = `
+  attribute vec3 aEcke, aFN; attribute vec2 aUV;
+  attribute vec3 iOrt, iNrm, iDrift; attribute vec4 iA, iB;
+  uniform mat4 uP; uniform mat3 uRot;
+  uniform float uT, uMund, uBlink, uThink, uWelle, uListen, uScan, uLevel, uAuf, uD, uPulse, uMic;
+  varying vec2 vUV; varying float vB; varying float vArt; varying float vTief;
+  void main(){
+    float ao = iA.x, m = iA.y, zuf = iA.z, kf = iA.w * uMund, mo = iB.x * uMund, lid = iB.y, gr = iB.z, art = iB.w;
+    vec3 c = iOrt;
+    c.y -= kf*0.085 + mo*0.012; c.z -= kf*0.03 + mo*0.10;            // Kiefer klappt auf, Mund öffnet sich
+    float wippe = sin(uT*(0.25 + zuf*0.6) + zuf*40.0);
+    c += iDrift * (1.0 + 0.22*wippe);                                 // Randwürfel treiben
+    if (art > 0.5) { c.x += sin(uT*(0.12 + zuf*0.3) + zuf*9.0)*0.06; c.y += cos(uT*(0.1 + zuf*0.25) + zuf*17.0)*0.07 + (art > 1.5 ? mod(uT*0.03*(0.5 + zuf) + zuf, 1.0)*0.4 - 0.2 : 0.0); }
+    float da = clamp((uAuf*1.5 - zuf*0.8 - (1.0 - m)*0.35) * 5.0, 0.0, 1.0);  // Aufbau beim Start
+    vec3 e = aEcke;
+    float lose = step(0.0005, dot(iDrift, iDrift));
+    float tief = (art > 0.5 || lose > 0.5) ? 0.5 : 5.0;                               // Gesichtswürfel reichen nach hinten: keine Lücken an Stufen
+    e.z = e.z > 0.0 ? 0.5 : -tief;
+    vec3 p = c + e * vec3(gr*0.93, gr*0.93, art > 0.5 ? gr : 1.0) * uD * da * (1.0 - lose*0.25*zuf);
+    vec3 pr = uRot * p;
+    gl_Position = uP * vec4(pr.x, pr.y, pr.z - 4.2, 1.0);
+    // Licht
+    vec3 L = normalize(vec3(-0.58, 0.50, 0.64));
+    vec3 ns = normalize(uRot * iNrm), nf = uRot * aFN;
+    float d = max(0.0, dot(ns, L));
+    float glatt = (0.035 + 0.80*pow(d, 1.55)) * ao;                    // weiches Licht aus der Form des Gesichts
+    glatt += 0.30*pow(max(0.0, dot(ns, normalize(L + vec3(0.0, 0.0, 1.0)))), 30.0) * ao;   // Glanz
+    glatt += 0.16*pow(1.0 - abs(ns.z), 4.0);                          // Lichtsaum
+    float kante = max(0.0, dot(nf, L));                               // Licht auf der einzelnen Würfelfläche
+    float vorn = step(0.5, aFN.z);
+    float b = mix(glatt*0.42 + kante*0.42*ao + 0.012, glatt*0.86 + kante*0.14*ao, vorn);
+    b *= 0.45 + 0.55*m;
+    if (art > 0.5) b = (0.16 + 0.5*zuf) * (0.55 + 0.6*kante);
+    b *= 1.0 + uLevel*0.22 + uPulse*0.2;
+    b -= mo*0.5 + uBlink*lid*0.16*step(0.25, lid);
+    b += max(0.0, 1.0 - abs(iOrt.y - uWelle)*8.0) * 0.34 * uThink * step(art, 0.5);       // Lichtwelle beim Nachdenken
+    b += max(0.0, 1.0 - abs(iOrt.y - uScan)*14.0) * 0.14 * uListen * step(art, 0.5);      // Abtastlinie beim Zuhören
+    b += uMic * 0.10 * iA.w;
+    vB = b; vUV = aUV; vArt = art; vTief = pr.z;
+  }`;
+  const FS = `
+  precision mediump float;
+  varying vec2 vUV; varying float vB; varying float vArt; varying float vTief;
+  void main(){
+    float b = max(0.0, vB);
+    vec3 col = mix(vec3(0.004, 0.012, 0.055), vec3(0.035, 0.150, 0.720), smoothstep(0.0, 0.40, b));
+    col = mix(col, vec3(0.170, 0.420, 1.000), smoothstep(0.30, 0.66, b));
+    col = mix(col, vec3(0.560, 0.800, 1.000), smoothstep(0.62, 0.96, b));
+    col = mix(col, vec3(0.900, 0.965, 1.000), smoothstep(1.02, 1.55, b));
+    if (vArt > 1.5) col = mix(vec3(0.9, 0.45, 0.08), vec3(1.0, 0.86, 0.5), clamp(b*1.6, 0.0, 1.0));   // goldene Funken
+    vec2 r = abs(vUV);
+    col *= 1.0 - 0.42*smoothstep(0.36, 0.5, max(r.x, r.y));           // dunkle Fuge: jeder Würfel bleibt einzeln sichtbar
+    col *= clamp(1.0 + vTief*0.28, 0.45, 1.25);                        // weiter hinten dunkler
+    gl_FragColor = vec4(col, 1.0);
+  }`;
+  const VS_BG = `attribute vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }`;
+  const FS_BG = `
+  precision mediump float; uniform vec2 uRes, uC; uniform float uLevel, uPulse;
+  void main(){
+    vec2 uv = gl_FragCoord.xy / uRes; vec2 p = (uv - uC) * vec2(uRes.x/uRes.y, 1.0); float d = length(p);
+    vec3 col = vec3(0.0, 0.006, 0.028) + vec3(0.012, 0.045, 0.170) * exp(-d*2.3) * (1.0 + uLevel*0.9 + uPulse*0.5);
+    gl_FragColor = vec4(col, 1.0);
+  }`;
+  const VS_LN = `attribute vec2 aPos; attribute vec4 aCol; varying vec4 vC; void main(){ vC = aCol; gl_Position = vec4(aPos, 0.0, 1.0); }`;
+  const FS_LN = `precision mediump float; varying vec4 vC; void main(){ gl_FragColor = vec4(vC.rgb * vC.a, 1.0); }`;
+
+  function prog(vs, fs, attribs) {
+    const mk = (t, src) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+    const p = gl.createProgram(); gl.attachShader(p, mk(gl.VERTEX_SHADER, vs)); gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fs));
+    attribs.forEach((n, i) => gl.bindAttribLocation(p, i, n));
+    gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const u = {}, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(p, i); u[a.name] = gl.getUniformLocation(p, a.name); }
+    return { p, u };
+  }
+  let P = null, BG = null, LN = null, bufW, bufI, bufT, bufL;
+  function glbauen() {
+    // Ein Würfel ohne Rückseite: 5 Flächen, je 2 Dreiecke. Je Ecke: Ort 3, Flächennormale 3, Lage in der Fläche 2
+    const F = [[[0, 0, 1], [1, 0, 0], [0, 1, 0]], [[0, 1, 0], [1, 0, 0], [0, 0, -1]], [[0, -1, 0], [1, 0, 0], [0, 0, 1]], [[1, 0, 0], [0, 0, -1], [0, 1, 0]], [[-1, 0, 0], [0, 0, 1], [0, 1, 0]]];
+    const v = [];
+    for (const [n, a, b] of F) for (const [s, t] of [[-1, -1], [1, -1], [1, 1], [-1, -1], [1, 1], [-1, 1]])
+      v.push((n[0] + a[0] * s + b[0] * t) / 2, (n[1] + a[1] * s + b[1] * t) / 2, (n[2] + a[2] * s + b[2] * t) / 2, n[0], n[1], n[2], s / 2, t / 2);
+    bufW = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, bufW); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
+    bufI = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, bufI); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(INST), gl.STATIC_DRAW);
+    bufT = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, bufT); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    bufL = gl.createBuffer();
+    P = prog(VS, FS, ["aEcke", "aFN", "aUV", "iOrt", "iNrm", "iA", "iB", "iDrift"]);
+    BG = prog(VS_BG, FS_BG, ["aPos"]); LN = prog(VS_LN, FS_LN, ["aPos", "aCol"]);
+  }
+
+  /* ---------- schräge Lichtspuren im Hintergrund ---------- */
+  const SPUR = [];
+  for (let i = 0; i < 54; i++) SPUR.push({ x: rnd() * 2.6 - 1.3, y: rnd() * 2.6 - 1.3, v: 0.05 + rnd() * 0.32, l: 0.1 + rnd() * 0.5, a: 0.1 + rnd() * 0.5, g: rnd() < 0.16 });
+  const LD = new Float32Array(54 * 12);
+
+  let cyw = 0.3, cpt = -0.16, mund = 0, blink = 0, nextBlink = 3, auf = 0;
+
+  function render(S, w, h) {
+    const t = S.t, dt = S.dt, o = J.orbit || { x: w / 2, y: h / 2 };
+    auf = clamp(auf + dt * (J.started ? 0.42 : -1), 0, 1);
+    nextBlink -= dt; if (nextBlink < 0) { blink = 1; nextBlink = 3 + rnd() * 5; } blink = Math.max(0, blink - dt * 5);
+    // Grundhaltung wie auf einem Porträt: leicht gedreht, Kinn etwas angehoben; die Maus dreht mit
+    const zy = 0.30 + Math.sin(t * 0.22) * 0.10 + mx * 0.9 + S.think * Math.sin(t * 0.7) * 0.1;
+    const zp = -0.15 + Math.sin(t * 0.17) * 0.035 + my * 0.45 - S.listen * 0.03;
+    cyw += (zy - cyw) * Math.min(1, dt * 2.4); cpt += (zp - cpt) * Math.min(1, dt * 2.4);
+    const ziel = S.speak * Math.min(1, S.level * 1.7);
+    mund += (ziel - mund) * Math.min(1, dt * (ziel > mund ? 24 : 12));
+    const c1 = Math.cos(cyw), s1 = Math.sin(cyw), c2 = Math.cos(cpt), s2 = Math.sin(cpt);
+    const at = 1 + Math.sin(t * 1.1) * 0.006 + S.pulse * 0.02;
+    const rot = new Float32Array([c1 * at, s1 * s2 * at, -s1 * c2 * at, 0, c2 * at, s2 * at, s1 * at, -c1 * s2 * at, c1 * c2 * at]);
+    const asp = W / H, f = 1 / Math.tan(0.325), n = 0.5, fa = 30;
+    const ox = (o.x / w) * 2 - 1, oy = 1 - (o.y / h) * 2;
+    // Perspektive, Mittelpunkt auf die Stelle der Figur verschoben
+    const PM = new Float32Array([f / asp, 0, 0, 0, 0, f, 0, 0, -ox, -oy, (fa + n) / (n - fa), -1, 0, 0, 2 * fa * n / (n - fa), 0]);
+
+    gl.viewport(0, 0, W, H); gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
+    for (let i = 0; i < 8; i++) { gl.disableVertexAttribArray(i); inst.div(i, 0); }
+    gl.useProgram(BG.p); gl.bindBuffer(gl.ARRAY_BUFFER, bufT); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    gl.uniform2f(BG.u.uRes, W, H); gl.uniform2f(BG.u.uC, o.x / w, 1 - o.y / h); gl.uniform1f(BG.u.uLevel, S.level); gl.uniform1f(BG.u.uPulse, S.pulse);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    // Lichtspuren
+    let k = 0;
+    for (const r of SPUR) {
+      r.y -= dt * r.v * (1 + S.think * 1.5); r.x -= dt * r.v * 0.62 * (1 + S.think * 1.5);
+      if (r.y < -1.5 || r.x < -1.6) { r.y = 1.3 + rnd() * 0.3; r.x = rnd() * 3 - 0.9; }
+      const c = r.g ? [1, 0.62, 0.2] : [0.25, 0.5, 1], a = r.a * 0.5;
+      LD.set([r.x + r.l * 0.62, r.y + r.l, c[0], c[1], c[2], 0, r.x, r.y, c[0], c[1], c[2], a], k); k += 12;
+    }
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+    gl.useProgram(LN.p); gl.bindBuffer(gl.ARRAY_BUFFER, bufL); gl.bufferData(gl.ARRAY_BUFFER, LD, gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(0); gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 24, 0); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 24, 8);
+    gl.drawArrays(gl.LINES, 0, SPUR.length * 2);
+    // Würfel
+    gl.disable(gl.BLEND); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS); gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.useProgram(P.p);
+    gl.bindBuffer(gl.ARRAY_BUFFER, bufW);
+    gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 32, 0);
+    gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 32, 12);
+    gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 32, 24);
+    gl.bindBuffer(gl.ARRAY_BUFFER, bufI);
+    [[3, 3, 0], [4, 3, 12], [5, 4, 24], [6, 4, 40], [7, 3, 56]].forEach(([l, n2, off]) => { gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, n2, gl.FLOAT, false, 68, off); inst.div(l, 1); });
+    gl.uniformMatrix4fv(P.u.uP, false, PM); gl.uniformMatrix3fv(P.u.uRot, false, rot);
+    gl.uniform1f(P.u.uT, t); gl.uniform1f(P.u.uMund, mund); gl.uniform1f(P.u.uBlink, blink); gl.uniform1f(P.u.uThink, S.think);
+    gl.uniform1f(P.u.uWelle, ((t * 0.5) % 2.0) - 0.75); gl.uniform1f(P.u.uListen, Math.max(0, S.listen - 0.3) * 1.4);
+    gl.uniform1f(P.u.uScan, ((t * 0.7) % 2.4) - 1.2); gl.uniform1f(P.u.uLevel, S.level); gl.uniform1f(P.u.uAuf, auf);
+    gl.uniform1f(P.u.uD, D); gl.uniform1f(P.u.uPulse, S.pulse); gl.uniform1f(P.u.uMic, S.mic);
+    inst.draw(gl.TRIANGLES, 0, 30, ANZ);
+    for (let i = 3; i < 8; i++) inst.div(i, 0);
+  }
+
+  J.registerTheme({
+    id: "avatar", maus: "aus", kippen: false,        // das Gesicht dreht sich selbst zur Maus
+    init(J) {
+      const nm = (J.settings.name || "Jarvis").toUpperCase(); $("thName").textContent = nm; document.title = nm + " · Avatar";
+      J.on("state", s => { $("thState").textContent = "avatar · " + { idle: "bereit", listening: "hört zu", thinking: "denkt nach", speaking: "spricht" }[s]; });
+      addEventListener("pointermove", e => { mx = e.clientX / innerWidth - 0.5; my = e.clientY / innerHeight - 0.5; });
+      bauen();
+      if (!gl || !inst) { $("thState").textContent = "Dieser Browser kann die 3D-Darstellung nicht (WebGL fehlt)"; return; }
+      try { glbauen(); ok = true; } catch (e) { console.error(e); $("thState").textContent = "3D-Darstellung nicht möglich: Grafikkarte oder Treiber"; }
+    },
+    resize(w, h) {
+      cx = w / 2; cy = h * 0.47; R = Math.min(w * 0.27, h * 0.40); J.orbit = { x: cx, y: cy, r: R * 1.2 };
+      DPR = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(4.2e6 / Math.max(1, w * h)));
+      W = cv.width = Math.round(w * DPR); H = cv.height = Math.round(h * DPR);
+    },
+    draw(ctx, w, h, S) {
+      ctx.clearRect(0, 0, w, h);                       // die 2D-Ebene bleibt durchsichtig; das Gesicht liegt darunter in WebGL
+      if (!ok) { ctx.fillStyle = "#00020a"; ctx.fillRect(0, 0, w, h); return; }
+      render(S, w, h);
+      if (S.listen > 0.3) {
+        ctx.strokeStyle = `rgba(90,170,255,${(S.listen - 0.3) * 0.3 + S.mic * 0.4})`; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.ellipse(cx, cy, R * (1.05 + S.mic * 0.1), R * (1.3 + S.mic * 0.1), 0, 0, TAU); ctx.stroke();
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

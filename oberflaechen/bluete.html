@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JARVIS · Blüte</title>
+<link rel="stylesheet" href="/core/core.css">
+<style>
+  /* Oberfläche 14 von 22 · BLÜTE */
+  :root{--ac:#b9a8ff;--ac-rgb:185,168,255;--bg:#07070c}
+  #th-cap{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:5;text-align:center;pointer-events:none}
+  #th-cap h1{margin:0;font-size:12px;letter-spacing:.42em;font-weight:600;color:rgba(255,255,255,.88);padding-left:.42em}
+  #th-cap p{margin:6px 0 0;font-size:11px;color:var(--mut);letter-spacing:.2em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="th-cap"><h1 id="thName">JARVIS</h1><p id="thState">blüte · bereit</p></div>
+<script src="/core/core.js"></script>
+<script>
+(function () {
+  const J = window.Jarvis, $ = id => document.getElementById(id), TAU = Math.PI * 2;
+  const cap = J => { const nm = (J.settings.name || "Jarvis").toUpperCase(); $("thName").textContent = nm; document.title = nm + " · Blüte";
+    J.on("state", s => { $("thState").textContent = "blüte · " + { idle: "bereit", listening: "hört zu", thinking: "denkt nach", speaking: "spricht" }[s]; }); };
+  let cx = 0, cy = 0, R = 200, rot = 0;
+  const bub = [], stem = [];
+  J.registerTheme({
+    id: "bluete", maus: "abstossen",
+    init(J) {
+      cap(J);
+      for (let i = 0; i < 300; i++) { const a = Math.random() * TAU, d = 0.68 + (Math.random() + Math.random() - 1) * 0.3; bub.push({ a, d, r: 0.012 + Math.pow(Math.random(), 2.4) * 0.085, p: Math.random() * TAU, sp: (Math.random() - 0.5) * 0.08, h: Math.random() }); }
+      for (let i = 0; i < 110; i++) stem.push({ b: (Math.random() * bub.length) | 0, o: (Math.random() - 0.5), p: Math.random(), s: 0.15 + Math.random() * 0.35 });
+    },
+    resize(w, h) { cx = w / 2; cy = h * 0.4; R = Math.min(w * 0.25, h * 0.27); J.orbit = { x: cx, y: cy, r: R }; },
+    draw(ctx, w, h, S) {
+      const t = S.t, sp = J.sprite;
+      rot += S.dt * (0.05 + S.think * 0.5 + S.speak * 0.1);
+      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.75);
+      bg.addColorStop(0, "#15141f"); bg.addColorStop(0.5, "#0b0b12"); bg.addColorStop(1, "#050508");
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+      ctx.globalCompositeOperation = "lighter";
+      const br = R * (1 + S.level * 0.06 + S.pulse * 0.04), bx = cx, by = cy + br * 2.05, ty = cy + br * 1.05;
+      J.glowAt(ctx, sp(130, 110, 255), cx, cy, br * 3.2, 0.2 + S.level * 0.2);
+      const pos = bub.map(b => { const a = b.a + rot + t * b.sp, d = b.d * (1 + 0.03 * Math.sin(t * 0.7 + b.p) + S.level * 0.08 * Math.sin(b.p + t * 7)); return [cx + Math.cos(a) * br * d, cy + Math.sin(a) * br * d * 0.96]; });
+      // Stamm: Linien vom Fuß durch einen engen Hals in die Krone
+      ctx.lineWidth = 1;
+      for (const s of stem) {
+        const p = pos[s.b], nx = bx + s.o * br * 0.16, x1 = bx + s.o * br * 0.3, x2 = p[0] + (bx - p[0]) * 0.25;
+        ctx.strokeStyle = `rgba(215,210,255,${0.07 + S.level * 0.1 + S.think * 0.05})`;
+        ctx.beginPath(); ctx.moveTo(nx, by); ctx.bezierCurveTo(x1, ty + br * 0.25, x2, ty - br * 0.1, p[0], p[1]); ctx.stroke();
+        const u = (s.p + t * s.s * (1 + S.speak + S.think * 2)) % 1, iu = 1 - u;   // Lichtpunkt wandert den Stamm hinauf
+        const qx = iu * iu * iu * nx + 3 * iu * iu * u * x1 + 3 * iu * u * u * x2 + u * u * u * p[0], qy = iu * iu * iu * by + 3 * iu * iu * u * (ty + br * 0.25) + 3 * iu * u * u * (ty - br * 0.1) + u * u * u * p[1];
+        J.glowAt(ctx, sp(235, 230, 255, true), qx, qy, 4 + S.level * 5, 0.5 * Math.sin(u * Math.PI));
+      }
+      const tr = ctx.createLinearGradient(0, ty, 0, by); tr.addColorStop(0, "rgba(255,255,255,0)"); tr.addColorStop(0.6, `rgba(225,220,255,${0.35 + S.level * 0.3})`); tr.addColorStop(1, `rgba(150,220,255,${0.6})`);
+      ctx.fillStyle = tr; ctx.beginPath(); ctx.moveTo(bx - br * 0.2, ty); ctx.quadraticCurveTo(bx - br * 0.05, (ty + by) / 2, bx - br * 0.075, by); ctx.lineTo(bx + br * 0.075, by); ctx.quadraticCurveTo(bx + br * 0.05, (ty + by) / 2, bx + br * 0.2, ty); ctx.closePath(); ctx.fill();
+      // Krone aus Blasen
+      bub.forEach((b, i) => {
+        const p = pos[i], rr = br * b.r * (1 + S.level * 0.9 * (0.5 + 0.5 * Math.sin(b.p + t * 8)) + S.mic * 0.4), al = 0.16 + 0.3 * b.h + S.level * 0.3;
+        ctx.strokeStyle = b.h > 0.93 ? `rgba(255,150,200,${al + 0.2})` : `rgba(225,222,255,${al})`; ctx.lineWidth = b.r > 0.05 ? 1.3 : 0.9;
+        ctx.beginPath(); ctx.arc(p[0], p[1], rr, 0, TAU); ctx.stroke();
+        if (b.r > 0.04) { ctx.fillStyle = `rgba(200,195,255,${0.035 + S.level * 0.05})`; ctx.fill(); }
+        if (b.h > 0.6) J.glowAt(ctx, sp(235, 230, 255, true), p[0], p[1], 3 + rr * 0.5, 0.5 + 0.4 * Math.sin(t * 2 + b.p));
+      });
+      const core = br * (0.16 + S.level * 0.28 + S.pulse * 0.1);
+      J.glowAt(ctx, sp(170, 150, 255), cx, cy, core * 4, 0.55 + S.level * 0.3); J.glowAt(ctx, sp(250, 248, 255, true), cx, cy, core * 1.1, 0.9);
+      if (S.listen > 0.3) { ctx.strokeStyle = `rgba(215,205,255,${(S.listen - 0.3) * 0.5 + S.mic * 0.5})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, br * (1.14 + S.mic * 0.2), 0, TAU); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    }
+  });
+})();
+</script>
+</body>
+</html>

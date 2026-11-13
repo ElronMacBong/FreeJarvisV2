@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JARVIS · Membran</title>
+<link rel="stylesheet" href="/core/core.css">
+<style>
+  /* Oberfläche 9 von 22 · MEMBRAN */
+  :root{--ac:#3d8bff;--ac-rgb:61,139,255;--bg:#030814}
+  #th-cap{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:5;text-align:center;pointer-events:none}
+  #th-cap h1{margin:0;font-size:12px;letter-spacing:.42em;font-weight:600;color:rgba(255,255,255,.88);padding-left:.42em}
+  #th-cap p{margin:6px 0 0;font-size:11px;color:var(--mut);letter-spacing:.2em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="th-cap"><h1 id="thName">JARVIS</h1><p id="thState">membran · bereit</p></div>
+<script src="/core/core.js"></script>
+<script>
+(function () {
+  const J = window.Jarvis, $ = id => document.getElementById(id), TAU = Math.PI * 2;
+  const cap = J => { const nm = (J.settings.name || "Jarvis").toUpperCase(); $("thName").textContent = nm; document.title = nm + " · Membran";
+    J.on("state", s => { $("thState").textContent = "membran · " + { idle: "bereit", listening: "hört zu", thinking: "denkt nach", speaking: "spricht" }[s]; }); };
+  let cx = 0, cy = 0, R = 200, rot = 0;
+  const dots = [], LAYERS = [1.0, 0.76, 0.52];
+  J.registerTheme({
+    id: "membran", maus: "abstossen",
+    init(J) {
+      cap(J);
+      for (let i = 0; i < 230; i++) { const u = Math.random() * TAU, v = Math.acos(2 * Math.random() - 1), r = 0.2 + Math.random() * 0.75; dots.push({ x: Math.sin(v) * Math.cos(u) * r, y: Math.cos(v) * r, z: Math.sin(v) * Math.sin(u) * r, p: Math.random() * TAU, ray: Math.random() < 0.22 }); }
+    },
+    resize(w, h) { cx = w / 2; cy = h * 0.46; R = Math.min(w * 0.28, h * 0.32); J.orbit = { x: cx, y: cy, r: R }; },
+    draw(ctx, w, h, S) {
+      const t = S.t, sp = J.sprite;
+      rot += S.dt * (0.1 + S.think * 0.8 + S.speak * 0.15);
+      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.75);
+      bg.addColorStop(0, "#0a1c44"); bg.addColorStop(0.5, "#050d24"); bg.addColorStop(1, "#02050d");
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+      const br = R * (1 + S.pulse * 0.04);
+      const blob = (rad, li, amp) => { ctx.beginPath(); for (let i = 0; i <= 120; i++) { const a = i / 120 * TAU;
+        const rr = rad * (1 + amp * (0.06 * Math.sin(3 * a + t * 0.6 + li * 1.7) + 0.035 * Math.sin(5 * a - t * 0.9 + li) + 0.02 * Math.sin(8 * a + t * 1.3)) + S.level * 0.07 * Math.sin(6 * a - t * 8 + li * 2) + S.mic * 0.05 * Math.sin(9 * a + t * 6));
+        const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.closePath(); };
+      // äußerer Schein
+      ctx.globalCompositeOperation = "lighter";
+      J.glowAt(ctx, sp(40, 110, 255), cx, cy, br * 3.6, 0.3 + S.level * 0.2);
+      ctx.globalCompositeOperation = "source-over";
+      LAYERS.forEach((L, li) => {
+        const rad = br * L * (1 + S.level * (0.05 + li * 0.05) + 0.02 * Math.sin(t * 0.8 + li));
+        blob(rad, li, 1 + li * 0.5);
+        const g = ctx.createRadialGradient(cx - rad * 0.2, cy - rad * 0.3, rad * 0.1, cx, cy, rad * 1.05);
+        g.addColorStop(0, `rgba(${90 + li * 40},${150 + li * 30},255,${0.1 + li * 0.07})`); g.addColorStop(0.75, `rgba(40,90,220,${0.16 + li * 0.05})`); g.addColorStop(1, `rgba(140,190,255,${0.34 + li * 0.08})`);
+        ctx.fillStyle = g; ctx.fill();
+        ctx.strokeStyle = `rgba(190,220,255,${0.3 + li * 0.14 + S.listen * 0.2 + S.level * 0.3})`; ctx.lineWidth = 1.2; ctx.stroke();
+      });
+      // Punkte und Strahlen im Inneren
+      ctx.globalCompositeOperation = "lighter";
+      const F = 3, cr = Math.cos(rot), sr = Math.sin(rot), s1 = sp(150, 200, 255, true);
+      ctx.lineWidth = 1;
+      for (const d of dots) {
+        const x = d.x * cr - d.z * sr, z = d.x * sr + d.z * cr, k = F / (F + z), px = cx + x * br * 0.92 * k, py = cy + d.y * br * 0.92 * k;
+        const tw = 0.5 + 0.5 * Math.sin(t * 1.6 + d.p);
+        if (d.ray) { ctx.strokeStyle = `rgba(140,190,255,${(0.05 + 0.1 * tw) * (1 + S.level * 2 + S.think)})`; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(px, py); ctx.stroke(); }
+        J.glowAt(ctx, s1, px, py, (3 + tw * 3 + S.level * 4) * k, 0.3 + 0.5 * tw);
+      }
+      const core = br * (0.2 + S.level * 0.22 + S.pulse * 0.08);
+      J.glowAt(ctx, sp(90, 170, 255), cx, cy, core * 4, 0.7);
+      J.glowAt(ctx, sp(235, 245, 255, true), cx, cy, core * 1.2, 0.95);
+      ctx.globalAlpha = 1;
+    }
+  });
+})();
+</script>
+</body>
+</html>

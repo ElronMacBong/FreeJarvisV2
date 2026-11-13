@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JARVIS · Reaktor</title>
+<link rel="stylesheet" href="/core/core.css">
+<style>
+  /* Oberfläche 22 von 22 · REAKTOR */
+  :root{--ac:#5fe1ff;--ac-rgb:95,225,255;--bg:#01060a}
+  #th-cap{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:5;text-align:center;pointer-events:none}
+  #th-cap h1{margin:0;font-size:12px;letter-spacing:.42em;font-weight:600;color:rgba(255,255,255,.88);padding-left:.42em}
+  #th-cap p{margin:6px 0 0;font-size:11px;color:var(--mut);letter-spacing:.2em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="th-cap"><h1 id="thName">JARVIS</h1><p id="thState">reaktor · bereit</p></div>
+<script src="/core/core.js"></script>
+<script>
+(function () {
+  const J = window.Jarvis, $ = id => document.getElementById(id), TAU = Math.PI * 2;
+  const cap = J => { const nm = (J.settings.name || "Jarvis").toUpperCase(); $("thName").textContent = nm; document.title = nm + " · Reaktor";
+    J.on("state", s => { $("thState").textContent = "reaktor · " + { idle: "bereit", listening: "hört zu", thinking: "denkt nach", speaking: "spricht" }[s]; }); };
+  const rnd = Math.random, gauss = () => (rnd() + rnd() + rnd() + rnd() - 2) / 2;
+  let cx = 0, cy = 0, R = 200, rot = 0;
+  let a1 = 0, a2 = 0, a3 = 0; const sparks = [];
+  J.registerTheme({
+    id: "reaktor", maus: "wirbel",
+    init(J) { cap(J); for (let i = 0; i < 90; i++) sparks.push({ a: rnd() * TAU, r: 0.3 + rnd() * 1.1, v: 0.1 + rnd() * 0.4, p: rnd() * TAU }); },
+    resize(w, h) { cx = w / 2; cy = h * 0.46; R = Math.min(w * 0.23, h * 0.3); J.orbit = { x: cx, y: cy, r: R * 0.95 }; },
+    draw(ctx, w, h, S) {
+      const t = S.t, dt = S.dt, sp = J.sprite;
+      a1 += dt * (0.18 + S.think * 1.6 + S.speak * 0.3); a2 -= dt * (0.3 + S.think * 2.2 + S.speak * 0.5); a3 += dt * (0.9 + S.think * 4 + S.level * 2);
+      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.75);
+      bg.addColorStop(0, "#06222d"); bg.addColorStop(0.5, "#030e14"); bg.addColorStop(1, "#010406");
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+      const br = R * (1 + S.pulse * 0.03), on = `rgba(160,240,255,`, lv = S.level;
+      ctx.globalCompositeOperation = "lighter";
+      J.glowAt(ctx, sp(40, 190, 255), cx, cy, br * 3.6, 0.32 + lv * 0.3);
+      const arc = (r, a, b, wd, col) => { ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.beginPath(); ctx.arc(cx, cy, r, a, b); ctx.stroke(); };
+      // äußerer Ring: 10 Spulen, leuchten wie eine Pegelanzeige im Kreis
+      const NS = 10;
+      for (let i = 0; i < NS; i++) { const a = a1 + i / NS * TAU, lit = lv * 1.25 > ((i * 3) % NS) / NS ? 1 : 0, gl = 0.22 + 0.55 * lit + 0.15 * Math.sin(t * 2 + i) ** 2;
+        arc(br * 1.0, a + 0.05, a + TAU / NS - 0.05, br * 0.17, `rgba(60,200,255,${0.1 + 0.16 * lit})`);
+        arc(br * 1.085, a + 0.05, a + TAU / NS - 0.05, 2, on + gl + ")"); arc(br * 0.915, a + 0.05, a + TAU / NS - 0.05, 2, on + gl + ")");
+        for (const e of [0.05, TAU / NS - 0.05]) { ctx.strokeStyle = on + gl + ")"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx + Math.cos(a + e) * br * 0.915, cy + Math.sin(a + e) * br * 0.915); ctx.lineTo(cx + Math.cos(a + e) * br * 1.085, cy + Math.sin(a + e) * br * 1.085); ctx.stroke(); }
+        for (let k = 1; k < 5; k++) { const aa = a + 0.05 + k * (TAU / NS - 0.1) / 5; ctx.strokeStyle = `rgba(120,225,255,${0.14 + 0.3 * lit})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx + Math.cos(aa) * br * 0.94, cy + Math.sin(aa) * br * 0.94); ctx.lineTo(cx + Math.cos(aa) * br * 1.06, cy + Math.sin(aa) * br * 1.06); ctx.stroke(); } }
+      arc(br * 1.2, 0, TAU, 1, "rgba(120,225,255,.22)");
+      for (let i = 0; i < 72; i++) { const a = -a1 * 0.5 + i / 72 * TAU, l = i % 6 ? 0.03 : 0.07; ctx.strokeStyle = `rgba(140,230,255,${i % 6 ? 0.25 : 0.6})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * br * 1.2, cy + Math.sin(a) * br * 1.2); ctx.lineTo(cx + Math.cos(a) * br * (1.2 + l), cy + Math.sin(a) * br * (1.2 + l)); ctx.stroke(); }
+      // mittlerer Ring: drei Bögen, gegenläufig
+      for (let i = 0; i < 3; i++) { const a = a2 + i * TAU / 3; arc(br * 0.72, a, a + 1.5, br * 0.05, `rgba(70,210,255,${0.3 + lv * 0.3})`); arc(br * 0.72, a, a + 1.5, 1.5, on + (0.8) + ")"); J.glowAt(ctx, sp(220, 250, 255, true), cx + Math.cos(a + 1.5) * br * 0.72, cy + Math.sin(a + 1.5) * br * 0.72, 12 + lv * 10, 0.9); }
+      arc(br * 0.6, 0, TAU, 1, "rgba(120,225,255,.3)");
+      // innerer Ring: schnelle Segmente
+      for (let i = 0; i < 24; i++) { const a = a3 + i / 24 * TAU; if (i % 4 === 3) continue; arc(br * 0.47, a, a + TAU / 24 - 0.05, br * 0.07, `rgba(150,238,255,${0.25 + lv * 0.5 * Math.sin(t * 10 + i) ** 2 + S.think * 0.2})`); }
+      for (let i = 0; i < 6; i++) { const a = a1 * 2 + i * TAU / 6; ctx.strokeStyle = `rgba(150,238,255,${0.3 + lv * 0.4})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * br * 0.26, cy + Math.sin(a) * br * 0.26); ctx.lineTo(cx + Math.cos(a) * br * 0.42, cy + Math.sin(a) * br * 0.42); ctx.stroke(); }
+      const sS = sp(190, 245, 255, true);
+      for (const q of sparks) { const rr = ((q.r + t * q.v * (0.4 + lv * 2)) % 1.1) + 0.25; J.glowAt(ctx, sS, cx + Math.cos(q.a + t * 0.1) * br * rr, cy + Math.sin(q.a + t * 0.1) * br * rr, 3.5, 0.5 * Math.sin((rr - 0.25) / 1.1 * Math.PI) * (0.4 + lv)); }
+      const core = br * (0.24 + lv * 0.12 + S.pulse * 0.05);
+      J.glowAt(ctx, sp(80, 215, 255), cx, cy, core * 4.6, 0.75 + lv * 0.25); J.glowAt(ctx, sp(235, 252, 255, true), cx, cy, core * 2, 1);
+      arc(core, 0, TAU, 2, "rgba(255,255,255,.9)");
+      if (S.listen > 0.3) arc(br * (1.36 + S.mic * 0.2), 0, TAU, 1.5, `rgba(170,240,255,${(S.listen - 0.3) * 0.4 + S.mic * 0.5})`);
+      ctx.globalAlpha = 1;
+    }
+  });
+})();
+</script>
+</body>
+</html>

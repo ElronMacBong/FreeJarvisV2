@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JARVIS · Geodät</title>
+<link rel="stylesheet" href="/core/core.css">
+<style>
+  /* Oberfläche 11 von 22 · GEODÄT */
+  :root{--ac:#dfe7ff;--ac-rgb:223,231,255;--bg:#07080d}
+  #th-cap{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:5;text-align:center;pointer-events:none}
+  #th-cap h1{margin:0;font-size:12px;letter-spacing:.42em;font-weight:600;color:rgba(255,255,255,.88);padding-left:.42em}
+  #th-cap p{margin:6px 0 0;font-size:11px;color:var(--mut);letter-spacing:.2em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="th-cap"><h1 id="thName">JARVIS</h1><p id="thState">geodät · bereit</p></div>
+<script src="/core/core.js"></script>
+<script>
+(function () {
+  const J = window.Jarvis, $ = id => document.getElementById(id), TAU = Math.PI * 2;
+  const cap = J => { const nm = (J.settings.name || "Jarvis").toUpperCase(); $("thName").textContent = nm; document.title = nm + " · Geodät";
+    J.on("state", s => { $("thState").textContent = "geodät · " + { idle: "bereit", listening: "hört zu", thinking: "denkt nach", speaking: "spricht" }[s]; }); };
+  let cx = 0, cy = 0, R = 200, rot = 0;
+  const LAT = 13, LON = 26, rays = [];
+  J.registerTheme({
+    id: "geodaet", maus: "abstossen",
+    init(J) { cap(J); for (let i = 0; i < 54; i++) rays.push({ u: Math.random() * TAU, v: Math.acos(2 * Math.random() - 1), p: Math.random() * TAU, l: 1.05 + Math.random() * 0.5 }); },
+    resize(w, h) { cx = w / 2; cy = h * 0.46; R = Math.min(w * 0.27, h * 0.31); J.orbit = { x: cx, y: cy, r: R }; },
+    draw(ctx, w, h, S) {
+      const t = S.t, sp = J.sprite;
+      rot += S.dt * (0.14 + S.think * 1.1 + S.speak * 0.2);
+      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.75);
+      bg.addColorStop(0, "#1a1d2c"); bg.addColorStop(0.5, "#0c0d15"); bg.addColorStop(1, "#050508");
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+      ctx.globalCompositeOperation = "lighter";
+      const br = R * (1 + S.level * 0.05 + S.pulse * 0.04), F = 3.2, ca = Math.cos(rot), sa = Math.sin(rot), tb = 0.38, cb = Math.cos(tb), sb = Math.sin(tb);
+      const P = (u, v, rr) => { const x0 = Math.sin(v) * Math.cos(u) * rr, y0 = Math.cos(v) * rr, z0 = Math.sin(v) * Math.sin(u) * rr, x = x0 * ca + z0 * sa, z1 = -x0 * sa + z0 * ca, y = y0 * cb - z1 * sb, z = y0 * sb + z1 * cb, k = F / (F + z); return [cx + x * br * k, cy + y * br * k, z, k]; };
+      const bump = (u, v) => 1 + S.level * 0.1 * Math.sin(4 * u + 3 * v - t * 8) + S.mic * 0.06 * Math.sin(7 * u + t * 5) + 0.015 * Math.sin(3 * u + t);
+      J.glowAt(ctx, sp(150, 170, 255), cx, cy, br * 3.2, 0.2 + S.level * 0.2);
+      ctx.lineWidth = 1;
+      for (let i = 1; i < LAT; i++) {   // Breitenkreise
+        const v = i / LAT * Math.PI; ctx.beginPath();
+        for (let j = 0; j <= 72; j++) { const u = j / 72 * TAU, p = P(u, v, bump(u, v)); j ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }
+        ctx.strokeStyle = `rgba(200,212,255,${0.1 + S.level * 0.12})`; ctx.stroke();
+      }
+      for (let j = 0; j < LON; j++) {   // Längenkreise
+        const u = j / LON * TAU; ctx.beginPath();
+        for (let i = 0; i <= 40; i++) { const v = i / 40 * Math.PI, p = P(u, v, bump(u, v)); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }
+        ctx.strokeStyle = `rgba(200,212,255,${0.08 + S.level * 0.1})`; ctx.stroke();
+      }
+      const s1 = sp(235, 240, 255, true), s2 = sp(255, 150, 190, true);
+      for (let i = 1; i < LAT; i++) for (let j = 0; j < LON; j++) {
+        const u = j / LON * TAU, v = i / LAT * Math.PI, p = P(u, v, bump(u, v)), front = p[2] < 0;
+        const hot = Math.sin(i * 12.9 + j * 78.2) > 0.86;
+        J.glowAt(ctx, hot ? s2 : s1, p[0], p[1], (front ? 5 : 3) * p[3] * (1 + S.level * 1.2 * (hot ? 2 : 1)), front ? 0.75 : 0.25);
+      }
+      for (const r of rays) {   // Strahlen aus dem Kern
+        const a = 0.5 + 0.5 * Math.sin(t * 1.4 + r.p), p = P(r.u, r.v, r.l * (1 + S.level * 0.35 * a));
+        const g = ctx.createLinearGradient(cx, cy, p[0], p[1]); g.addColorStop(0, `rgba(255,255,255,${0.35 * a + S.level * 0.3})`); g.addColorStop(1, "rgba(200,212,255,0)");
+        ctx.strokeStyle = g; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(p[0], p[1]); ctx.stroke();
+        J.glowAt(ctx, s1, p[0], p[1], 4 * p[3], 0.5 * a);
+      }
+      const core = br * (0.2 + S.level * 0.28 + S.pulse * 0.1);
+      J.glowAt(ctx, sp(255, 170, 205), cx, cy, core * 3.6, 0.6); J.glowAt(ctx, sp(255, 255, 255, true), cx, cy, core * 1.2, 1);
+      if (S.listen > 0.3) { ctx.strokeStyle = `rgba(230,236,255,${(S.listen - 0.3) * 0.5 + S.mic * 0.5})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, br * (1.12 + S.mic * 0.2), 0, TAU); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    }
+  });
+})();
+</script>
+</body>
+</html>

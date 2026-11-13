@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JARVIS · Kosmos 3D</title>
+<link rel="stylesheet" href="/core/core.css">
+<style>
+  /* Oberfläche 24 · KOSMOS 3D · echtes 3D mit WebGL (Prototyp, ohne Zusatzbibliothek) */
+  :root{--ac:#5fd0ff;--ac-rgb:95,208,255;--bg:#02040a}
+  html,body{background:#02040a}
+  #gl{position:fixed;inset:0;width:100vw;height:100vh;display:block;z-index:0;pointer-events:none}
+  #th-cap{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:5;text-align:center;pointer-events:none}
+  #th-cap h1{margin:0;font-size:12px;letter-spacing:.42em;font-weight:600;color:rgba(255,255,255,.88);padding-left:.42em}
+  #th-cap p{margin:6px 0 0;font-size:11px;color:var(--mut);letter-spacing:.2em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="th-cap"><h1 id="thName">JARVIS</h1><p id="thState">kosmos 3d · bereit</p></div>
+<script src="/core/core.js"></script>
+<script>
+(function () {
+  const J = window.Jarvis, $ = id => document.getElementById(id), TAU = Math.PI * 2;
+  const gl = $("gl").getContext("webgl", { antialias: true, alpha: false, premultipliedAlpha: false, powerPreference: "high-performance" })
+          || $("gl").getContext("experimental-webgl");
+
+  /* ---------- kleine Matrizenhilfen (spaltenweise, wie WebGL sie erwartet) ---------- */
+  const mul = (a, b) => { const o = new Float32Array(16); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s; } return o; };
+  const persp = (fov, asp, n, f) => { const t = 1 / Math.tan(fov / 2), o = new Float32Array(16); o[0] = t / asp; o[5] = t; o[10] = (f + n) / (n - f); o[11] = -1; o[14] = 2 * f * n / (n - f); return o; };
+  const trans = (x, y, z) => { const o = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1]); return o; };
+  const rotX = a => { const c = Math.cos(a), s = Math.sin(a); return new Float32Array([1, 0, 0, 0, 0, c, s, 0, 0, -s, c, 0, 0, 0, 0, 1]); };
+  const rotY = a => { const c = Math.cos(a), s = Math.sin(a); return new Float32Array([c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, 0, 0, 0, 1]); };
+  const rotZ = a => { const c = Math.cos(a), s = Math.sin(a); return new Float32Array([c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]); };
+
+  function prog(vs, fs, attribs) {
+    const mk = (t, src) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+    const p = gl.createProgram(); gl.attachShader(p, mk(gl.VERTEX_SHADER, vs)); gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fs));
+    attribs.forEach((n, i) => gl.bindAttribLocation(p, i, n));
+    gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(p, i), nm = a.name.replace("[0]", ""); u[nm] = gl.getUniformLocation(p, a.name); }
+    return { p, u };
+  }
+
+  /* ---------- Shader ---------- */
+  const VS_PTS = `
+  attribute vec3 aPos; attribute vec2 aMeta;
+  uniform mat4 uVP; uniform float uT, uLevel, uThink, uSpeak, uListen, uPulse, uAsp, uPx, uMouseOn;
+  uniform vec2 uMouse; uniform vec2 uWaveO[3]; uniform float uWaveT[3];
+  varying float vB; varying float vSeed;
+  mat2 rot(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
+  void main(){
+    vec3 p = aPos; float seed = aMeta.x, kind = aMeta.y, size = 1.0, br = 1.0;
+    if (kind < 0.5) {                                   // Kugel aus Punkten: atmet, wölbt sich beim Sprechen
+      float d = (sin(p.x*3.1 + uT*1.1) + sin(p.y*4.3 - uT*0.9) + sin(p.z*5.2 + uT*1.3)) / 3.0;
+      float amp = 0.05 + uLevel*0.32 + uThink*0.07 + uListen*0.03;
+      p *= 1.0 + d*amp + uPulse*0.07 + sin(uT*1.5)*0.012;
+      p.xz = rot(uT*0.12*(1.0 + uThink*3.0)) * p.xz;
+      size = 1.7;
+    } else if (kind < 1.5) {                            // Scheibe: innen schneller, kippt leicht
+      float r = length(p.xz);
+      float sp = (0.55 + uThink*1.6 + uSpeak*0.4) / (0.4 + r*r*0.5);
+      p.xz = rot(uT*sp*0.35) * p.xz;
+      p.y += sin(uT*0.8 + seed*6.28 + r*2.0) * 0.04 * (1.0 + uLevel*4.0);
+      p.xy = rot(0.38) * p.xy;
+      size = 2.1; br = 0.9;
+    } else {                                            // fernes Sternenfeld
+      p.xz = rot(uT*0.02 + seed) * p.xz; p.y += sin(uT*0.3 + seed*40.0) * 0.1;
+      size = 1.3; br = 0.5;
+    }
+    vec4 c = uVP * vec4(p, 1.0);
+    vec2 q = vec2(c.x/c.w*uAsp, c.y/c.w);
+    vec2 dm = q - vec2(uMouse.x*uAsp, uMouse.y); float dl = length(dm) + 1e-4;
+    float f = smoothstep(0.42, 0.0, dl) * uMouseOn;     // Zeiger schiebt Punkte weg
+    vec2 push = dm/dl * f * 0.16; float glow = f;
+    for (int i = 0; i < 3; i++) {                       // Klick-Wellen laufen durch den Raum
+      if (uWaveT[i] >= 0.0) {
+        vec2 dw = q - vec2(uWaveO[i].x*uAsp, uWaveO[i].y); float dd = length(dw) + 1e-4, rr = uWaveT[i]*1.15;
+        float k = exp(-(dd-rr)*(dd-rr)*70.0) * max(0.0, 1.0 - uWaveT[i]/1.8);
+        push += dw/dd * k * 0.13; glow += k*1.2;
+      }
+    }
+    c.xy += vec2(push.x/uAsp, push.y) * c.w;
+    gl_Position = c;
+    gl_PointSize = uPx * size * (0.55 + seed*0.9) * (1.0 + glow*1.4) * (1.0 + uLevel*0.35*step(kind, 0.5)) / c.w;
+    vB = br * (0.55 + 0.45*sin(uT*(1.0 + seed*2.0) + seed*30.0)) + glow*0.8 + uLevel*0.3;
+    vSeed = seed;
+  }`;
+  const FS_PTS = `
+  precision mediump float; varying float vB; varying float vSeed; uniform vec3 uCol, uCol2;
+  void main(){
+    float r = length(gl_PointCoord - 0.5) * 2.0; if (r > 1.0) discard;
+    float a = 1.0 - r; a *= a;
+    vec3 col = mix(uCol, uCol2, vSeed); col = mix(col, vec3(1.0), a*a*0.55);
+    gl_FragColor = vec4(col * a * vB * 0.95, 1.0);
+  }`;
+  const VS_BG = `attribute vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }`;
+  const FS_BG = `
+  precision mediump float; uniform vec2 uRes, uC; uniform float uLevel, uThink, uPulse; uniform vec3 uCol;
+  void main(){
+    vec2 uv = gl_FragCoord.xy / uRes; vec2 p = (uv - uC) * vec2(uRes.x/uRes.y, 1.0); float d = length(p);
+    float core = exp(-d*d*10.0) * (0.55 + uLevel*0.9 + uPulse*0.4 + uThink*0.15);
+    float halo = exp(-d*2.2) * 0.17;
+    vec3 bg = mix(vec3(0.012,0.02,0.05), vec3(0.03,0.05,0.11), 1.0 - uv.y*0.75);
+    gl_FragColor = vec4(bg + uCol*(halo + core*0.45) + vec3(core*core*0.28), 1.0);
+  }`;
+  const VS_LN = `attribute vec3 aPos; uniform mat4 uMVP; void main(){ gl_Position = uMVP * vec4(aPos, 1.0); }`;
+  const FS_LN = `precision mediump float; uniform vec4 uC; void main(){ gl_FragColor = vec4(uC.rgb * uC.a, 1.0); }`;
+
+  /* ---------- Daten ---------- */
+  const rnd = Math.random, gauss = () => (rnd() + rnd() + rnd() + rnd() - 2) / 2;
+  let P = null, BG = null, LN = null, bufPts, bufTri, bufRing, nPts = 0, ok = false, W = 1, H = 1, DPR = 1;
+  const RINGS = [{ r: 1.28, tx: 0.9, tz: 0.2, sp: 0.35 }, { r: 1.62, tx: 0.45, tz: -0.5, sp: -0.25 }, { r: 2.05, tx: 1.25, tz: 0.9, sp: 0.18 }];
+
+  function build() {
+    const d = [], N1 = 7000, N2 = 5200, N3 = 1800;
+    for (let i = 0; i < N1; i++) {                       // Kugel: 60 % Oberfläche, 40 % Inneres (wirkt dadurch massiv)
+      const y = 1 - (i + 0.5) / N1 * 2, rr = Math.sqrt(1 - y * y), a = i * 2.399963, k = i % 5 < 3 ? 1 : Math.pow(rnd(), 0.45);
+      d.push(Math.cos(a) * rr * k, y * k, Math.sin(a) * rr * k, rnd(), 0);
+    }
+    for (let i = 0; i < N2; i++) {                       // Scheibe mit zwei Spiralarmen
+      const r = 1.35 + Math.pow(rnd(), 0.85) * 1.5, arm = (i % 2) * Math.PI, a = rnd() < 0.3 ? rnd() * TAU : arm + (r - 1.35) * 3.1 + gauss() * (0.22 + 0.1 * r);
+      d.push(Math.cos(a) * r, gauss() * 0.05 * r, Math.sin(a) * r, rnd(), 1);
+    }
+    for (let i = 0; i < N3; i++) {                       // Staub in der Ferne
+      const v = [gauss(), gauss(), gauss()], l = Math.hypot(...v) || 1, r = 3.2 + rnd() * 3.2;
+      d.push(v[0] / l * r, v[1] / l * r, v[2] / l * r, rnd(), 2);
+    }
+    nPts = d.length / 5;
+    bufPts = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, bufPts); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(d), gl.STATIC_DRAW);
+    bufTri = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, bufTri); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const ring = []; for (let i = 0; i < 160; i++) { const a = i / 160 * TAU; ring.push(Math.cos(a), 0, Math.sin(a)); }
+    bufRing = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, bufRing); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(ring), gl.STATIC_DRAW);
+    P = prog(VS_PTS, FS_PTS, ["aPos", "aMeta"]); BG = prog(VS_BG, FS_BG, ["aPos"]); LN = prog(VS_LN, FS_LN, ["aPos"]);
+  }
+
+  const mix3 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+  let yaw = 0, pit = 0.3, cyaw = 0, cpit = 0.3;
+
+  function render(S, w, h) {
+    const o = J.orbit || { x: w / 2, y: h / 2 }, M = J.maus || { an: 0, waves: [], x: w / 2, y: h / 2, sx: w / 2, sy: h / 2, frei: false };
+    const asp = W / H, t = S.t;
+    // Farbe folgt dem Zustand
+    let c = [0.25, 0.82, 1.0];
+    c = mix3(c, [0.3, 1.0, 0.7], Math.min(1, S.listen * 0.8));
+    c = mix3(c, [0.68, 0.42, 1.0], Math.min(1, S.think));
+    c = mix3(c, [1.0, 0.62, 0.3], Math.min(1, S.speak));
+    const c2 = mix3(c, [c[2], c[0], c[1]], 0.55);
+    // Kamera: kippt mit dem Zeiger, dreht sich sonst langsam
+    const kipp = (J.settings || {}).maus_kippen !== false;
+    const nx = kipp && M.frei ? Math.max(-1, Math.min(1, (M.x - o.x) / (w / 2))) : 0, ny = kipp && M.frei ? Math.max(-1, Math.min(1, (M.y - o.y) / (h / 2))) : 0;
+    yaw += S.dt * (0.07 + S.think * 0.25); cyaw += (nx * 0.6 - cyaw) * Math.min(1, S.dt * 2.2); cpit += (0.3 + ny * 0.35 - cpit) * Math.min(1, S.dt * 2.2);
+    const D = 5.7 * (1 - S.pulse * 0.02);
+    const V = mul(trans(0, 0, -D), mul(rotX(cpit), rotY(yaw + cyaw)));
+    const T = trans((o.x / w) * 2 - 1, 1 - (o.y / h) * 2, 0);
+    const VP = mul(T, mul(persp(0.78, asp, 0.1, 40), V));
+
+    gl.viewport(0, 0, W, H); gl.disable(gl.BLEND); gl.disable(gl.DEPTH_TEST);
+    // Hintergrund und Kernleuchten
+    gl.useProgram(BG.p); gl.bindBuffer(gl.ARRAY_BUFFER, bufTri); gl.enableVertexAttribArray(0); gl.disableVertexAttribArray(1);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    gl.uniform2f(BG.u.uRes, W, H); gl.uniform2f(BG.u.uC, o.x / w, 1 - o.y / h);
+    gl.uniform1f(BG.u.uLevel, S.level); gl.uniform1f(BG.u.uThink, S.think); gl.uniform1f(BG.u.uPulse, S.pulse); gl.uniform3f(BG.u.uCol, c[0], c[1], c[2]);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+    // Ringe als feine Linien
+    gl.useProgram(LN.p); gl.bindBuffer(gl.ARRAY_BUFFER, bufRing); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+    RINGS.forEach((R, i) => {
+      const m = mul(VP, mul(rotY(t * R.sp * (1 + S.think * 2)), mul(rotZ(R.tz), mul(rotX(R.tx), new Float32Array([R.r, 0, 0, 0, 0, R.r, 0, 0, 0, 0, R.r, 0, 0, 0, 0, 1])))));
+      gl.uniformMatrix4fv(LN.u.uMVP, false, m);
+      gl.uniform4f(LN.u.uC, c2[0], c2[1], c2[2], 0.13 + S.level * 0.4 + S.listen * 0.08);
+      gl.drawArrays(gl.LINE_LOOP, 0, 160);
+    });
+    // Punkte
+    gl.useProgram(P.p); gl.bindBuffer(gl.ARRAY_BUFFER, bufPts);
+    gl.enableVertexAttribArray(0); gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 20, 0); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 20, 12);
+    gl.uniformMatrix4fv(P.u.uVP, false, VP);
+    gl.uniform1f(P.u.uT, t); gl.uniform1f(P.u.uLevel, S.level); gl.uniform1f(P.u.uThink, S.think); gl.uniform1f(P.u.uSpeak, S.speak);
+    gl.uniform1f(P.u.uListen, S.listen); gl.uniform1f(P.u.uPulse, S.pulse); gl.uniform1f(P.u.uAsp, asp); gl.uniform1f(P.u.uPx, 8 * DPR * H / (900 * DPR));
+    gl.uniform2f(P.u.uMouse, M.sx / w * 2 - 1, 1 - M.sy / h * 2); gl.uniform1f(P.u.uMouseOn, M.an || 0);
+    const wo = new Float32Array(6), wt = new Float32Array([-1, -1, -1]);
+    for (let i = 0; i < 3; i++) { const wv = M.waves[M.waves.length - 1 - i]; if (wv) { wo[i * 2] = wv.x / w * 2 - 1; wo[i * 2 + 1] = 1 - wv.y / h * 2; wt[i] = wv.t; } }
+    gl.uniform2fv(P.u.uWaveO, wo); gl.uniform1fv(P.u.uWaveT, wt);
+    gl.uniform3f(P.u.uCol, c[0], c[1], c[2]); gl.uniform3f(P.u.uCol2, c2[0], c2[1], c2[2]);
+    gl.drawArrays(gl.POINTS, 0, nPts);
+  }
+
+  J.registerTheme({
+    id: "kosmos", maus: "abstossen", kippen: false,       // Kippen übernimmt hier die 3D-Kamera selbst
+    init(J) {
+      const nm = (J.settings.name || "Jarvis").toUpperCase(); $("thName").textContent = nm; document.title = nm + " · Kosmos 3D";
+      J.on("state", s => { $("thState").textContent = "kosmos 3d · " + { idle: "bereit", listening: "hört zu", thinking: "denkt nach", speaking: "spricht" }[s]; });
+      if (!gl) { $("thState").textContent = "WebGL wird von diesem Browser nicht unterstützt"; return; }
+      try { build(); ok = true; } catch (e) { console.error(e); $("thState").textContent = "WebGL-Fehler: Grafikkarte oder Treiber nicht geeignet"; }
+    },
+    resize(w, h) {
+      J.orbit = { x: w / 2, y: h * 0.47, r: Math.min(w * 0.3, h * 0.3) };
+      const cv = $("gl"); DPR = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(2.8e6 / Math.max(1, w * h)));
+      W = cv.width = Math.round(w * DPR); H = cv.height = Math.round(h * DPR);
+    },
+    draw(ctx, w, h, S) {
+      ctx.clearRect(0, 0, w, h);                         // die 2D-Ebene bleibt durchsichtig: Bots und Wellen liegen darüber
+      if (!ok) { ctx.fillStyle = "#02040a"; ctx.fillRect(0, 0, w, h); return; }
+      render(S, w, h);
+    }
+  });
+})();
+</script>
+</body>
+</html>

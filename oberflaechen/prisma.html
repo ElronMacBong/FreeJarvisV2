@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JARVIS · Prisma</title>
+<link rel="stylesheet" href="/core/core.css">
+<style>
+  /* Oberfläche 10 von 22 · PRISMA */
+  :root{--ac:#35d6e8;--ac-rgb:53,214,232;--bg:#020d10}
+  #th-cap{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:5;text-align:center;pointer-events:none}
+  #th-cap h1{margin:0;font-size:12px;letter-spacing:.42em;font-weight:600;color:rgba(255,255,255,.88);padding-left:.42em}
+  #th-cap p{margin:6px 0 0;font-size:11px;color:var(--mut);letter-spacing:.2em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="th-cap"><h1 id="thName">JARVIS</h1><p id="thState">prisma · bereit</p></div>
+<script src="/core/core.js"></script>
+<script>
+(function () {
+  const J = window.Jarvis, $ = id => document.getElementById(id), TAU = Math.PI * 2;
+  const cap = J => { const nm = (J.settings.name || "Jarvis").toUpperCase(); $("thName").textContent = nm; document.title = nm + " · Prisma";
+    J.on("state", s => { $("thState").textContent = "prisma · " + { idle: "bereit", listening: "hört zu", thinking: "denkt nach", speaking: "spricht" }[s]; }); };
+  let cx = 0, cy = 0, R = 200, rot = 0;
+  let V = [], FA = [];
+  function build() {
+    const P = (1 + Math.sqrt(5)) / 2, n = v => { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; };
+    V = [[-1, P, 0], [1, P, 0], [-1, -P, 0], [1, -P, 0], [0, -1, P], [0, 1, P], [0, -1, -P], [0, 1, -P], [P, 0, -1], [P, 0, 1], [-P, 0, -1], [-P, 0, 1]].map(n);
+    let f = [[0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11], [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8], [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9], [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]];
+    const mid = {}, m = (a, b) => { const k = a < b ? a + "_" + b : b + "_" + a; if (mid[k] == null) { V.push(n([V[a][0] + V[b][0], V[a][1] + V[b][1], V[a][2] + V[b][2]])); mid[k] = V.length - 1; } return mid[k]; };
+    const g = []; for (const [a, b, c] of f) { const ab = m(a, b), bc = m(b, c), ca = m(c, a); g.push([a, ab, ca], [b, bc, ab], [c, ca, bc], [ab, bc, ca]); }
+    FA = g.map((f, i) => ({ f, p: Math.random() * TAU, o: Math.random(), c: [(V[f[0]][0] + V[f[1]][0] + V[f[2]][0]) / 3, (V[f[0]][1] + V[f[1]][1] + V[f[2]][1]) / 3, (V[f[0]][2] + V[f[1]][2] + V[f[2]][2]) / 3] }));
+  }
+  J.registerTheme({
+    id: "prisma", maus: "abstossen",
+    init(J) { cap(J); build(); },
+    resize(w, h) { cx = w / 2; cy = h * 0.47; R = Math.min(w * 0.22, h * 0.255); J.orbit = { x: cx, y: cy, r: R }; },
+    draw(ctx, w, h, S) {
+      const t = S.t, sp = J.sprite;
+      rot += S.dt * (0.16 + S.think * 1.2 + S.speak * 0.25);
+      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.75);
+      bg.addColorStop(0, "#07262c"); bg.addColorStop(0.5, "#031216"); bg.addColorStop(1, "#010708");
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+      ctx.globalCompositeOperation = "lighter";
+      const br = R * (1 + S.pulse * 0.05);
+      J.glowAt(ctx, sp(40, 200, 220), cx, cy, br * 3.4, 0.26 + S.level * 0.25);
+      const core = br * (0.26 + S.level * 0.3);
+      J.glowAt(ctx, sp(120, 240, 255), cx, cy, core * 3.4, 0.75); J.glowAt(ctx, sp(240, 255, 255, true), cx, cy, core * 1.1, 0.95);
+      ctx.globalCompositeOperation = "source-over";
+      const ca = Math.cos(rot), sa = Math.sin(rot), cb = Math.cos(0.42 + Math.sin(t * 0.2) * 0.15), sb = Math.sin(0.42 + Math.sin(t * 0.2) * 0.15), F = 3.4;
+      const tr = (v, push, c) => { const x0 = v[0] + c[0] * push, y0 = v[1] + c[1] * push, z0 = v[2] + c[2] * push, x = x0 * ca + z0 * sa, z1 = -x0 * sa + z0 * ca, y = y0 * cb - z1 * sb, z = y0 * sb + z1 * cb, k = F / (F + z); return [cx + x * br * k, cy + y * br * k, z]; };
+      const list = FA.map(Fc => {
+        const push = 0.04 + 0.05 * Math.sin(t * 0.9 + Fc.p) + S.level * (0.06 + 0.2 * Fc.o) * (0.5 + 0.5 * Math.sin(t * 9 + Fc.p)) + S.think * 0.12 * Fc.o + S.mic * 0.12;
+        const p = Fc.f.map(i => tr(V[i], push, Fc.c)), z = (p[0][2] + p[1][2] + p[2][2]) / 3;
+        const nx = Fc.c[0] * ca + Fc.c[2] * sa, nz0 = -Fc.c[0] * sa + Fc.c[2] * ca, ny = Fc.c[1] * cb - nz0 * sb;
+        return { p, z, li: Math.max(0, Math.min(1, 0.5 - nx * 0.35 - ny * 0.6)), Fc };
+      }).sort((a, b) => b.z - a.z);
+      ctx.lineJoin = "round";
+      for (const q of list) {
+        const front = q.z < 0, sh = 0.5 + 0.5 * Math.sin(t * 1.3 + q.Fc.p), l = q.li;
+        ctx.beginPath(); ctx.moveTo(q.p[0][0], q.p[0][1]); ctx.lineTo(q.p[1][0], q.p[1][1]); ctx.lineTo(q.p[2][0], q.p[2][1]); ctx.closePath();
+        ctx.fillStyle = front ? `rgba(${Math.round(40 + 170 * l)},${Math.round(190 + 60 * l)},${Math.round(215 + 40 * l)},${0.1 + 0.34 * l + 0.1 * sh * S.level})` : "rgba(20,110,130,0.14)";
+        ctx.fill();
+        ctx.strokeStyle = front ? `rgba(200,250,255,${0.35 + 0.5 * l + S.level * 0.2})` : "rgba(90,200,220,0.16)"; ctx.lineWidth = front ? 1.1 : 0.7; ctx.stroke();
+      }
+      ctx.globalCompositeOperation = "lighter";
+      if (S.listen > 0.3) J.glowAt(ctx, sp(120, 240, 255), cx, cy, br * (2.2 + S.mic * 1.5), (S.listen - 0.3) * 0.25 + S.mic * 0.3);
+      ctx.globalAlpha = 1;
+    }
+  });
+})();
+</script>
+</body>
+</html>

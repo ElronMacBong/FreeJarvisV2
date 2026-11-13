@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JARVIS · Singularität</title>
+<link rel="stylesheet" href="/core/core.css">
+<style>
+  /* Oberfläche 18 von 22 · SINGULARITÄT */
+  :root{--ac:#ff9a3c;--ac-rgb:255,154,60;--bg:#050302}
+  #th-cap{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:5;text-align:center;pointer-events:none}
+  #th-cap h1{margin:0;font-size:12px;letter-spacing:.42em;font-weight:600;color:rgba(255,255,255,.88);padding-left:.42em}
+  #th-cap p{margin:6px 0 0;font-size:11px;color:var(--mut);letter-spacing:.2em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="th-cap"><h1 id="thName">JARVIS</h1><p id="thState">singularität · bereit</p></div>
+<script src="/core/core.js"></script>
+<script>
+(function () {
+  const J = window.Jarvis, $ = id => document.getElementById(id), TAU = Math.PI * 2;
+  const cap = J => { const nm = (J.settings.name || "Jarvis").toUpperCase(); $("thName").textContent = nm; document.title = nm + " · Singularität";
+    J.on("state", s => { $("thState").textContent = "singularität · " + { idle: "bereit", listening: "hört zu", thinking: "denkt nach", speaking: "spricht" }[s]; }); };
+  const rnd = Math.random, gauss = () => (rnd() + rnd() + rnd() + rnd() - 2) / 2;
+  let cx = 0, cy = 0, R = 200, rot = 0;
+  const D = [], bgs = [];
+  J.registerTheme({
+    id: "singularitaet", maus: "anziehen",
+    init(J) {
+      cap(J);
+      for (let i = 0; i < 1900; i++) { const r = 0.5 + Math.pow(rnd(), 1.6) * 1.0; D.push({ r, a: rnd() * TAU, z: gauss() * 0.018 * (1 + r), p: rnd() * TAU, s: 0.4 + rnd() * 1.2 }); }
+      for (let i = 0; i < 200; i++) bgs.push({ x: rnd(), y: rnd(), s: rnd(), p: rnd() * TAU });
+    },
+    resize(w, h) { cx = w / 2; cy = h * 0.46; R = Math.min(w * 0.25, h * 0.31); J.orbit = { x: cx, y: cy, r: R * 0.95 }; },
+    draw(ctx, w, h, S) {
+      const t = S.t, sp = J.sprite;
+      rot += S.dt * (0.35 + S.think * 1.6 + S.speak * 0.5);
+      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.75);
+      bg.addColorStop(0, "#1c0e05"); bg.addColorStop(0.5, "#0a0503"); bg.addColorStop(1, "#030201");
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+      for (const s of bgs) { const dx = s.x * w - cx, dy = s.y * h - cy, d = Math.hypot(dx, dy), pull = 1 + (R * R * 0.5) / (d * d + 400);   // Sterne werden um das Loch gebogen
+        ctx.globalAlpha = 0.2 + 0.4 * Math.sin(t * (0.4 + s.s) + s.p) ** 2; ctx.fillStyle = "#fff"; ctx.fillRect(cx + dx * pull, cy + dy * pull, 1 + s.s, 1 + s.s); }
+      ctx.globalAlpha = 1; ctx.globalCompositeOperation = "lighter";
+      const br = R * (1 + S.pulse * 0.04), rb = br * 0.4, tilt = 1.36, ct = Math.cos(tilt), sn = Math.sin(tilt), F = 4;
+      const sA = sp(255, 150, 50, true), sB = sp(255, 225, 170, true), sC = sp(255, 90, 30, true);
+      J.glowAt(ctx, sp(255, 120, 30), cx, cy, br * 3.6, 0.3 + S.level * 0.25);
+      const disc = front => { for (const d of D) {
+        const a = d.a + rot / Math.pow(d.r, 1.5), x0 = Math.cos(a) * d.r, y0 = Math.sin(a) * d.r, z0 = d.z * (1 + S.level * 2);
+        const y1 = y0 * ct - z0 * sn, z1 = y0 * sn + z0 * ct; if ((z1 < 0) !== front) continue;
+        const k = F / (F + z1), dop = 0.55 + 0.45 * Math.cos(a - 0.3);   // eine Seite heller: sie bewegt sich auf uns zu
+        J.glowAt(ctx, d.r < 0.72 ? sB : d.r < 1.1 ? sA : sC, cx + x0 * br * k, cy + y1 * br * k, (2.4 + d.s * 2.4 + S.level * 3) * k, (0.25 + 0.6 * dop) * (1.5 - d.r * 0.6) + S.level * 0.25); } };
+      disc(false);
+      // gebogenes Licht der Scheibe hinter dem Loch: Bogen über und unter dem Schatten
+      for (const [ry, al] of [[1.0, 0.9], [0.92, 0.5]]) for (const wdt of [16, 6, 2]) {
+        ctx.strokeStyle = wdt > 10 ? `rgba(255,130,40,${0.1 * al + S.level * 0.06})` : wdt > 4 ? `rgba(255,180,90,${0.3 * al + S.level * 0.15})` : `rgba(255,240,215,${0.75 * al})`; ctx.lineWidth = wdt;
+        ctx.beginPath(); ctx.ellipse(cx, cy, rb * 1.42, rb * 1.32 * ry, 0, Math.PI * 1.02, Math.PI * 1.98); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(cx, cy, rb * 1.3, rb * 1.12 * ry, 0, Math.PI * 0.08, Math.PI * 0.92); ctx.globalAlpha = 0.45; ctx.stroke(); ctx.globalAlpha = 1;
+      }
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(cx, cy, rb, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = "lighter";
+      for (const wdt of [9, 3.5, 1.3]) { ctx.strokeStyle = wdt > 5 ? `rgba(255,150,60,${0.22 + S.level * 0.2})` : wdt > 2 ? `rgba(255,205,140,${0.55 + S.level * 0.3})` : "rgba(255,250,235,.95)"; ctx.lineWidth = wdt * (1 + S.level * 0.6); ctx.beginPath(); ctx.arc(cx, cy, rb * 1.03, 0, TAU); ctx.stroke(); }
+      disc(true);
+      if (S.speak > 0.05 || S.think > 0.05) { const jl = br * (1.3 + S.level * 0.7) * Math.max(S.speak, S.think); for (const dir of [-1, 1]) { const g = ctx.createLinearGradient(cx, cy, cx, cy + dir * jl); g.addColorStop(0, "rgba(255,220,170,.28)"); g.addColorStop(1, "rgba(255,150,60,0)"); ctx.strokeStyle = g; ctx.lineWidth = 3 + S.level * 5; ctx.beginPath(); ctx.moveTo(cx, cy + dir * rb * 1.05); ctx.lineTo(cx, cy + dir * jl); ctx.stroke(); } }
+      if (S.listen > 0.3) J.glowAt(ctx, sp(255, 180, 90), cx, cy, br * (2 + S.mic * 1.6), (S.listen - 0.3) * 0.2 + S.mic * 0.3);
+      ctx.globalAlpha = 1;
+    }
+  });
+})();
+</script>
+</body>
+</html>

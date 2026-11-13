@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JARVIS · Synapse</title>
+<link rel="stylesheet" href="/core/core.css">
+<style>
+  /* Oberfläche 19 von 22 · SYNAPSE */
+  :root{--ac:#4fe3c1;--ac-rgb:79,227,193;--bg:#020608}
+  #th-cap{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:5;text-align:center;pointer-events:none}
+  #th-cap h1{margin:0;font-size:12px;letter-spacing:.42em;font-weight:600;color:rgba(255,255,255,.88);padding-left:.42em}
+  #th-cap p{margin:6px 0 0;font-size:11px;color:var(--mut);letter-spacing:.2em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="th-cap"><h1 id="thName">JARVIS</h1><p id="thState">synapse · bereit</p></div>
+<script src="/core/core.js"></script>
+<script>
+(function () {
+  const J = window.Jarvis, $ = id => document.getElementById(id), TAU = Math.PI * 2;
+  const cap = J => { const nm = (J.settings.name || "Jarvis").toUpperCase(); $("thName").textContent = nm; document.title = nm + " · Synapse";
+    J.on("state", s => { $("thState").textContent = "synapse · " + { idle: "bereit", listening: "hört zu", thinking: "denkt nach", speaking: "spricht" }[s]; }); };
+  const rnd = Math.random, gauss = () => (rnd() + rnd() + rnd() + rnd() - 2) / 2;
+  let cx = 0, cy = 0, R = 200, rot = 0;
+  const N = [], E = [], PU = []; let spawn = 0;
+  J.registerTheme({
+    id: "synapse", maus: "anziehen",
+    init(J) {
+      cap(J);
+      N.push({ x: 0, y: 0, s: 3.6, p: 0, f: 0 });
+      let tries = 0; while (N.length < 150 && tries++ < 9000) { const a = rnd() * TAU, d = 0.26 + Math.pow(rnd(), 0.85) * 1.5, x = Math.cos(a) * d * 1.4, y = Math.sin(a) * d * 0.88;
+        if (N.every(n => Math.hypot(n.x - x, n.y - y) > 0.17)) N.push({ x, y, s: 0.6 + rnd() * 0.9, p: rnd() * TAU, f: 0 }); }
+      N.forEach((n, i) => { N.map((m, j) => [Math.hypot(m.x - n.x, m.y - n.y), j]).filter(q => q[1] !== i).sort((a, b) => a[0] - b[0]).slice(0, i ? 3 : 9).forEach(q => {
+        if (!E.some(e => (e.a === i && e.b === q[1]) || (e.a === q[1] && e.b === i))) E.push({ a: i, b: q[1], c: (rnd() - 0.5) * 0.5 }); }); });
+      J.on("sentence", () => { for (let i = 0; i < 10; i++) fire(0); });
+    },
+    resize(w, h) { cx = w / 2; cy = h * 0.46; R = Math.min(w * 0.24, h * 0.32); J.orbit = { x: cx, y: cy, r: R * 0.9 }; },
+    draw(ctx, w, h, S) {
+      const t = S.t, dt = S.dt, sp = J.sprite;
+      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.75);
+      bg.addColorStop(0, "#07201e"); bg.addColorStop(0.5, "#030d0e"); bg.addColorStop(1, "#010405");
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+      ctx.globalCompositeOperation = "lighter";
+      const br = R * (1 + S.pulse * 0.03);
+      const pos = N.map(n => [cx + (n.x + Math.sin(t * 0.3 + n.p) * 0.025) * br, cy + (n.y + Math.cos(t * 0.26 + n.p * 1.7) * 0.025) * br]);
+      const ctl = e => { const a = pos[e.a], b = pos[e.b]; return [(a[0] + b[0]) / 2 + (a[1] - b[1]) * e.c, (a[1] + b[1]) / 2 + (b[0] - a[0]) * e.c]; };
+      ctx.lineWidth = 0.8; J.glowAt(ctx, sp(60, 220, 185), cx, cy, br * 2.6, 0.3 + S.level * 0.3);
+      for (const e of E) { const a = pos[e.a], b = pos[e.b], c = ctl(e);
+        ctx.strokeStyle = `rgba(110,235,205,${0.2 + 0.3 * Math.max(N[e.a].f, N[e.b].f) + S.level * 0.08})`; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(c[0], c[1], b[0], b[1]); ctx.stroke(); }
+      // Impulse
+      spawn += dt * (1.5 + S.think * 16 + S.level * 22 + S.listen * 3 + S.mic * 14);
+      while (spawn > 1) { spawn--; fire((rnd() * N.length) | 0); }
+      const sP = sp(215, 255, 245, true);
+      for (let i = PU.length - 1; i >= 0; i--) { const q = PU[i]; q.u += dt * q.v; const e = E[q.e];
+        if (q.u >= 1) { const to = q.dir ? e.a : e.b; N[to].f = 1; PU.splice(i, 1); if (q.hop > 0 && PU.length < 260) fire(to, q.hop - 1, q.e); continue; }
+        const u = q.dir ? 1 - q.u : q.u, a = pos[e.a], b = pos[e.b], c = ctl(e), iu = 1 - u;
+        J.glowAt(ctx, sP, iu * iu * a[0] + 2 * iu * u * c[0] + u * u * b[0], iu * iu * a[1] + 2 * iu * u * c[1] + u * u * b[1], 7, 0.95); }
+      const s1 = sp(80, 230, 195, true), s2 = sp(60, 200, 170);
+      N.forEach((n, i) => { n.f = Math.max(0, n.f - dt * 2.2); const p = pos[i], big = i === 0 ? 1 + S.level * 1.6 + S.pulse * 0.5 : 1;
+        J.glowAt(ctx, s2, p[0], p[1], (16 + n.f * 26) * n.s * big, 0.2 + n.f * 0.5 + (i ? 0 : 0.3));
+        J.glowAt(ctx, n.f > 0.3 || !i ? sP : s1, p[0], p[1], (5 + n.f * 6) * n.s * big, 0.75 + n.f * 0.25); });
+      if (S.listen > 0.3) { ctx.strokeStyle = `rgba(150,245,220,${(S.listen - 0.3) * 0.4 + S.mic * 0.5})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, br * (0.3 + S.mic * 0.3), 0, TAU); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    }
+  });
+  function fire(node, hop, from) {
+    const cand = []; E.forEach((e, i) => { if (i !== from && (e.a === node || e.b === node)) cand.push(i); }); if (!cand.length) return;
+    const ei = cand[(rnd() * cand.length) | 0]; PU.push({ e: ei, dir: E[ei].b === node, u: 0, v: 1.6 + rnd() * 1.6, hop: hop == null ? 3 : hop });
+  }
+})();
+</script>
+</body>
+</html>

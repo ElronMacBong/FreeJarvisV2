@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JARVIS · Retro</title>
+<link rel="stylesheet" href="/core/core.css">
+<style>
+  /* Oberfläche 23 von 23 · RETRO · technische Arbeitsübersicht im UML-Stil */
+  :root{--ac:#6fe3ff;--ac-rgb:111,227,255;--bg:#070d13}
+  body.jv-retrogreifen,body.jv-retrogreifen *{cursor:grabbing!important;user-select:none}
+  body.jv-retrohover{cursor:grab}
+  body.jv-retrogroesse{cursor:nwse-resize}
+</style>
+</head>
+<body>
+<script src="/core/core.js"></script>
+<script>
+(function () {
+  const J = window.Jarvis, TAU = Math.PI * 2;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const MONO = '"Cascadia Mono",Consolas,"SF Mono",Menlo,monospace';
+  const UI = '"Segoe UI",system-ui,-apple-system,sans-serif';
+  const POS = J.store.get("retropos", {});     // gemerkte Plätze der Kästen (Anteil der Fensterbreite)
+  let W = 0, H = 0, Z = 1, boxen = [], hov = null, drag = null, puls = {}, tick = 0;
+  const zoom = (w, h) => clamp(Math.min(w / 1100, h / 640), 1, 1.6);   // große Bildschirme: alles proportional größer, damit die Schrift lesbar bleibt
+
+  /* ---------- Inhalt der Kästen aus den Einstellungen und der Bot-Statistik */
+  function kuerzen(s, n) { s = String(s || ""); return s.length > n ? s.slice(0, n - 1) + "…" : s; }
+  function bauen() {
+    const st = J.settings || {}, bots = J.bots ? J.bots.aktiv() : [], stats = J.bots ? J.bots.stats() : {};
+    const liste = [];
+    const kern = {
+      id: "jarvis", kern: true, col: [111, 227, 255], stereo: "«KI-Kern»", name: (st.name || "Jarvis").toUpperCase(),
+      attr: [["anbieter", { ollama: "lokal · ollama", claude: "claude · api", openai: "openai-komp." }[st.anbieter] || st.anbieter || "—"],
+             ["modell", kuerzen((J.current && J.current.modell) || st.modell || "automatisch", 22)],
+             ["stimme", st.stimme === "elevenlabs" ? "elevenlabs" : st.stimme === "aus" ? "stumm" : "browser"],
+             ["bots", bots.length + " aktiv"]],
+      ops: [["chat()", J.state === "idle" ? "bereit" : { listening: "hört zu", thinking: "denkt nach", speaking: "spricht" }[J.state]],
+            ["gedaechtnis()", st.auto_merken ? "lernt mit" : "nur auf befehl"],
+            ["pc_zugriff()", st.pc_an ? (st.pc_ordner || []).length + " ordner frei" : "aus"]],
+      status: J.state === "idle" ? 0 : 1
+    };
+    liste.push(kern);
+    bots.forEach((b, i) => {
+      const s = stats[b.id] || {}, o = J.bots.ort(b), busy = J.bots.busy(b.id), v = (s.verlauf || [])[(s.verlauf || []).length - 1];
+      liste.push({
+        id: b.id, cfg: b, col: J.bots.farbe(b.farbe), stereo: o.cloud ? "«Bot · Cloud»" : "«Bot · lokal»", name: b.name,
+        attr: [["ki", kuerzen(J.bots.PROVN[b.anbieter || ""], 20)], ["modell", kuerzen(J.bots.modell(b), 20)],
+               ["rolle", kuerzen(b.rolle || "—", 24)]],
+        ops: [["aufgaben()", (s.anzahl || 0) + ""], ["dauer()", s.dauer ? s.dauer + " s" : "—"],
+              ["zuletzt()", kuerzen(v ? v.aufgabe : "—", 24)]],
+        status: busy ? 1 : s.fehler ? 2 : 0, busy, i
+      });
+    });
+    return liste;
+  }
+  function masse(ctx, b) {
+    ctx.font = "700 15px " + UI;
+    let w = ctx.measureText(b.name).width + 54;
+    ctx.font = "11px " + MONO;
+    for (const [k, v] of b.attr.concat(b.ops)) w = Math.max(w, ctx.measureText("+ " + k + ": " + v).width + 26);
+    b.w0 = Math.round(clamp(w, b.kern ? 230 : 196, 300));
+    b.h0 = 52 + 9 + b.attr.length * 16 + 9 + 9 + b.ops.length * 16 + 9;
+    b.sc = clamp((POS[b.id] && POS[b.id].s) || 1, 0.6, 2.2);       // vom Nutzer eingestellte Größe
+    b.w = Math.round(b.w0 * b.sc); b.h = Math.round(b.h0 * b.sc);
+  }
+  function platzieren() {
+    const n = boxen.length - 1, k = boxen[0];
+    k.x = W / 2 - k.w / 2; k.y = H * 0.44 - k.h / 2;
+    const mw = Math.max(...boxen.map(b => b.w)), mh = Math.max(...boxen.map(b => b.h));
+    const rx = Math.max(Math.min(W * 0.34, 440), Math.min((k.w + mw) + 110, W / 2 - mw / 2 - 12)), ry = Math.min(H * 0.26, 215);
+    boxen.forEach((b, i) => {
+      if (!i) return;
+      const p = POS[b.id];
+      if (p) { b.x = clamp(p.x * W, 4, W - b.w - 4); b.y = clamp(p.y * H, 60, H - b.h - 100); return; }
+      const ring = i > 6 ? 1.52 : 1, a = (n <= 4 ? Math.PI : -Math.PI / 2) + ((i - 1) % 6) / Math.max(3, Math.min(6, n)) * TAU * (n > 2 ? 1 : 0.5) + (ring > 1 ? 0.5 : 0);
+      b.x = Math.round((W / 2 + Math.cos(a) * rx * ring - b.w / 2) / 10) * 10;
+      b.y = Math.round((H * 0.44 + Math.sin(a) * ry * ring - b.h / 2) / 10) * 10;
+      b.x = clamp(b.x, 10, W - b.w - 10); b.y = clamp(b.y, 62, H - b.h - 96);
+    });
+    const kp = POS.jarvis; if (kp) { k.x = clamp(kp.x * W, 4, W - k.w - 4); k.y = clamp(kp.y * H, 60, H - k.h - 100); }
+  }
+
+  /* ---------- Zeichnen */
+  function raster(ctx) {
+    ctx.fillStyle = "#070d13"; ctx.fillRect(0, 0, W, H);
+    const g = ctx.createRadialGradient(W / 2, H * 0.44, 0, W / 2, H * 0.44, Math.max(W, H) * 0.6);
+    g.addColorStop(0, "rgba(20,48,66,.75)"); g.addColorStop(1, "rgba(5,9,14,0)");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.lineWidth = 1;
+    for (let i = 0, x = 0; x < W; x += 28, i++) { ctx.strokeStyle = i % 5 ? "rgba(111,227,255,.045)" : "rgba(111,227,255,.09)"; ctx.beginPath(); ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, H); ctx.stroke(); }
+    for (let i = 0, y = 0; y < H; y += 28, i++) { ctx.strokeStyle = i % 5 ? "rgba(111,227,255,.045)" : "rgba(111,227,255,.09)"; ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(W, y + .5); ctx.stroke(); }
+  }
+  function kasten(ctx, b, t) {
+    const c = b.col, hovr = hov === b ? 1 : 0, run = b.status === 1 ? 1 : 0;
+    const rc = (a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+    ctx.save(); ctx.translate(b.x, b.y); ctx.scale(b.sc, b.sc); ctx.translate(-b.x, -b.y);   // Kasten in der eingestellten Größe
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,.55)"; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
+    ctx.fillStyle = "rgba(9,17,24,.92)"; ctx.fillRect(b.x, b.y, b.w0, b.h0);
+    ctx.restore();
+    if (run || hovr) { ctx.save(); ctx.shadowColor = rc(.85); ctx.shadowBlur = 16 + 10 * Math.sin(t * 4) * run; ctx.strokeStyle = rc(.001); ctx.strokeRect(b.x + .5, b.y + .5, b.w0 - 1, b.h0 - 1); ctx.restore(); }
+    ctx.fillStyle = rc(.1); ctx.fillRect(b.x, b.y, b.w0, 26);                         // Kopfband
+    ctx.strokeStyle = rc(0.35 + hovr * 0.5 + run * 0.3); ctx.lineWidth = b.kern ? 1.6 : 1.2;
+    ctx.strokeRect(b.x + .5, b.y + .5, b.w0 - 1, b.h0 - 1);
+    ctx.fillStyle = rc(.9); ctx.fillRect(b.x, b.y, 3, b.h0);                           // Farbmarke links
+    // Kopf
+    ctx.textBaseline = "middle"; ctx.textAlign = "left";
+    ctx.font = "9px " + MONO; ctx.fillStyle = rc(.8);
+    ctx.fillText(b.stereo.toUpperCase(), b.x + 12, b.y + 13);
+    ctx.font = "700 15px " + UI; ctx.fillStyle = "#eaf6ff";
+    ctx.fillText(b.name, b.x + 12, b.y + 39);
+    const led = b.status === 1 ? [120, 255, 190] : b.status === 2 ? [255, 130, 110] : c;
+    const blink = b.status === 1 ? 0.55 + 0.45 * Math.sin(t * 7) : 1;
+    ctx.fillStyle = `rgba(${led[0]},${led[1]},${led[2]},${0.95 * blink})`;
+    ctx.beginPath(); ctx.arc(b.x + b.w0 - 14, b.y + 13, 4, 0, TAU); ctx.fill();
+    ctx.shadowColor = `rgba(${led[0]},${led[1]},${led[2]},.9)`; ctx.shadowBlur = 9; ctx.fill(); ctx.shadowBlur = 0;
+    let y = b.y + 52;
+    const trenner = () => { ctx.strokeStyle = rc(.3); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(b.x, y + .5); ctx.lineTo(b.x + b.w0, y + .5); ctx.stroke(); };
+    trenner(); y += 9;
+    ctx.font = "11px " + MONO;
+    for (const [k, v] of b.attr) { ctx.fillStyle = "rgba(190,215,230,.6)"; ctx.fillText("+ " + k + ":", b.x + 12, y + 8); ctx.fillStyle = "#d8ecf7"; ctx.textAlign = "right"; ctx.fillText(v, b.x + b.w0 - 12, y + 8); ctx.textAlign = "left"; y += 16; }
+    y += 9; trenner(); y += 9;
+    for (const [k, v] of b.ops) { ctx.fillStyle = rc(.75); ctx.fillText(k, b.x + 12, y + 8); ctx.fillStyle = "rgba(216,236,247,.85)"; ctx.textAlign = "right"; ctx.fillText(v, b.x + b.w0 - 12, y + 8); ctx.textAlign = "left"; y += 16; }
+      // Griff zum Vergrößern (unten rechts)
+    const gx = b.x + b.w0 - 13, gy = b.y + b.h0 - 13;
+    ctx.strokeStyle = rc(hovr ? .85 : .4); ctx.lineWidth = 1.4; ctx.lineCap = "round";
+    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(gx + i * 4, gy + 10); ctx.lineTo(gx + 10, gy + i * 4); ctx.stroke(); }
+    ctx.restore();
+  }
+  function weg(a, b) {   // rechtwinklige Verbindung wie in einem UML-Diagramm
+    const ac = { x: a.x + a.w / 2, y: a.y + a.h / 2 }, bc = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+    const dx = bc.x - ac.x, dy = bc.y - ac.y;
+    if (Math.abs(dx) * 0.8 >= Math.abs(dy)) {
+      const sx = dx > 0 ? a.x + a.w : a.x, ex = dx > 0 ? b.x : b.x + b.w, mx = (sx + ex) / 2;
+      return [[sx, ac.y], [mx, ac.y], [mx, bc.y], [ex, bc.y]];
+    }
+    const sy = dy > 0 ? a.y + a.h : a.y, ey = dy > 0 ? b.y : b.y + b.h, my = (sy + ey) / 2;
+    return [[ac.x, sy], [ac.x, my], [bc.x, my], [bc.x, ey]];
+  }
+  function aufWeg(p, u) {
+    let len = 0; const d = [];
+    for (let i = 1; i < p.length; i++) { const l = Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); d.push(l); len += l; }
+    let s = u * len;
+    for (let i = 0; i < d.length; i++) { if (s <= d[i] || i === d.length - 1) { const q = d[i] ? s / d[i] : 0; return [p[i][0] + (p[i + 1][0] - p[i][0]) * q, p[i][1] + (p[i + 1][1] - p[i][1]) * q]; } s -= d[i]; }
+    return p[p.length - 1];
+  }
+  function linie(ctx, a, b, t) {
+    const p = weg(a, b), c = b.col, run = b.status === 1, hovr = hov === b || hov === a;
+    const al = run ? 0.75 : hovr ? 0.5 : 0.26;
+    ctx.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${al})`; ctx.lineWidth = run ? 1.8 : 1.1;
+    ctx.beginPath(); p.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.stroke();
+    for (const q of p.slice(1, -1)) { ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${al})`; ctx.fillRect(q[0] - 1.5, q[1] - 1.5, 3, 3); }   // Knick
+    // Raute am Kern (Aggregation), Pfeil am Bot
+    const s = p[0], s2 = p[1], dx = Math.sign(s2[0] - s[0]), dy = Math.sign(s2[1] - s[1]);
+    ctx.fillStyle = "#0b141b"; ctx.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${al + 0.25})`; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(s[0], s[1]); ctx.lineTo(s[0] + dx * 7 - dy * 5, s[1] + dy * 7 - dx * 5);
+    ctx.lineTo(s[0] + dx * 14, s[1] + dy * 14); ctx.lineTo(s[0] + dx * 7 + dy * 5, s[1] + dy * 7 + dx * 5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    const e = p[p.length - 1], e2 = p[p.length - 2], ex = Math.sign(e[0] - e2[0]), ey = Math.sign(e[1] - e2[1]);
+    ctx.beginPath(); ctx.moveTo(e[0] - ex * 9 - ey * 5, e[1] - ey * 9 - ex * 5); ctx.lineTo(e[0], e[1]); ctx.lineTo(e[0] - ex * 9 + ey * 5, e[1] - ey * 9 + ex * 5); ctx.stroke();
+    // Beschriftung in der Mitte
+    const m = aufWeg(p, 0.5);
+    ctx.font = "9px " + MONO; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const lbl = run ? "verarbeitet" : "delegiert";
+    const tw = ctx.measureText(lbl).width;
+    ctx.fillStyle = "rgba(7,13,19,.92)"; ctx.fillRect(m[0] - tw / 2 - 4, m[1] - 7, tw + 8, 14);
+    ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${run ? 0.95 : 0.5})`; ctx.fillText(lbl, m[0], m[1]);
+    ctx.textAlign = "left";
+    // Datenpakete, wenn der Bot arbeitet oder gerade fertig wurde
+    const pz = puls[b.id] || 0;
+    if (run || pz > 0) for (let i = 0; i < 3; i++) {
+      const u = ((t * 0.55 + i / 3) % 1), q = aufWeg(p, run ? u : 1 - u);
+      const a2 = (run ? 1 : pz) * Math.sin(u * Math.PI);
+      const g = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], 9);
+      g.addColorStop(0, `rgba(235,252,255,${a2})`); g.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`);
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q[0], q[1], 9, 0, TAU); ctx.fill();
+    }
+  }
+  function geschwister(ctx, t) {   // Bots mit derselben KI: gestrichelte Verbindung
+    const grp = {};
+    boxen.slice(1).forEach(b => { const k = (b.cfg.anbieter || "erbt") + "|" + (b.cfg.modell || ""); (grp[k] = grp[k] || []).push(b); });
+    ctx.setLineDash([3, 5]); ctx.lineWidth = 1;
+    for (const k in grp) {
+      const g = grp[k]; if (g.length < 2) continue;
+      for (let i = 1; i < g.length; i++) {
+        const a = g[i - 1], b = g[i];
+        ctx.strokeStyle = "rgba(150,200,225,.18)";
+        ctx.beginPath(); ctx.moveTo(a.x + a.w / 2, a.y + a.h / 2); ctx.lineTo(b.x + b.w / 2, b.y + b.h / 2); ctx.stroke();
+        const m = [(a.x + a.w / 2 + b.x + b.w / 2) / 2, (a.y + a.h / 2 + b.y + b.h / 2) / 2];
+        ctx.font = "8px " + MONO; ctx.textAlign = "center"; ctx.fillStyle = "rgba(7,13,19,.9)";
+        const w2 = ctx.measureText("«gleiche ki»").width; ctx.fillRect(m[0] - w2 / 2 - 3, m[1] - 6, w2 + 6, 12);
+        ctx.fillStyle = "rgba(170,210,235,.4)"; ctx.fillText("«gleiche ki»", m[0], m[1] + 1); ctx.textAlign = "left";
+      }
+    }
+    ctx.setLineDash([]);
+  }
+  function rahmen(ctx) {
+    const st = J.settings || {}, n = boxen.length - 1, run = boxen.slice(1).filter(b => b.status === 1).length;
+    ctx.textBaseline = "middle";
+    ctx.font = "10px " + MONO; ctx.fillStyle = "rgba(111,227,255,.75)";
+    ctx.fillText("ARBEITSÜBERSICHT · " + (st.name || "JARVIS").toUpperCase() + " UND TEAM", 22, 74);
+    ctx.fillStyle = "rgba(170,205,225,.4)"; ctx.font = "9px " + MONO;
+    ctx.fillText("KLASSENDIAGRAMM · KÄSTEN VERSCHIEBBAR · ECKE ODER MAUSRAD ÄNDERT DIE GRÖSSE · KLICK ÖFFNET DAS DASHBOARD", 22, 90);
+    // Legende unten links
+    const ly = H - 112;
+    ctx.strokeStyle = "rgba(111,227,255,.22)"; ctx.strokeRect(22.5, ly + .5, 186, 76);
+    ctx.fillStyle = "rgba(9,17,24,.75)"; ctx.fillRect(23, ly + 1, 185, 75);
+    ctx.font = "9px " + MONO; ctx.fillStyle = "rgba(111,227,255,.7)"; ctx.fillText("LEGENDE", 32, ly + 14);
+    const z = [[[120, 255, 190], "arbeitet gerade"], [[111, 227, 255], "bereit"], [[255, 130, 110], "letzter Fehler"]];
+    z.forEach((q, i) => { ctx.fillStyle = `rgba(${q[0].join(",")},.95)`; ctx.beginPath(); ctx.arc(34, ly + 32 + i * 15, 3.5, 0, TAU); ctx.fill();
+      ctx.fillStyle = "rgba(200,225,240,.65)"; ctx.fillText(q[1], 46, ly + 32 + i * 15); });
+    // Schriftfeld unten rechts
+    const d = new Date(), bw = 236, bx = W - bw - 22, by = H - 112;
+    ctx.fillStyle = "rgba(9,17,24,.75)"; ctx.fillRect(bx, by, bw, 76);
+    ctx.strokeStyle = "rgba(111,227,255,.22)"; ctx.strokeRect(bx + .5, by + .5, bw, 76);
+    ctx.beginPath(); ctx.moveTo(bx, by + 22.5); ctx.lineTo(bx + bw, by + 22.5); ctx.stroke();
+    ctx.fillStyle = "rgba(111,227,255,.8)"; ctx.font = "10px " + MONO;
+    ctx.fillText("FREEJARVIS · SYSTEMPLAN", bx + 10, by + 12);
+    ctx.font = "9px " + MONO; ctx.fillStyle = "rgba(190,215,230,.6)";
+    const zeilen = [["BOTS", n + " aktiv · " + run + " in arbeit"], ["KERN", (J.current && J.current.modell) || (J.settings || {}).modell || "automatisch"],
+                    ["STAND", d.toLocaleDateString("de-DE") + " " + d.toLocaleTimeString("de-DE")]];
+    zeilen.forEach((q, i) => { ctx.fillStyle = "rgba(140,180,205,.55)"; ctx.fillText(q[0], bx + 10, by + 38 + i * 14);
+      ctx.fillStyle = "rgba(216,236,247,.85)"; ctx.fillText(String(q[1]).slice(0, 26), bx + 72, by + 38 + i * 14); });
+  }
+
+  /* ---------- Maus */
+  function treffer(x, y) { for (let i = boxen.length - 1; i >= 0; i--) { const b = boxen[i]; if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) return b; } return null; }
+  function merken() { boxen.forEach(b => { POS[b.id] = { x: b.x / W, y: b.y / H, s: +(b.sc || 1).toFixed(3) }; }); J.store.set("retropos", POS); }
+  function griff(x, y) {                       // Anfasser unten rechts zum Vergrößern
+    for (let i = boxen.length - 1; i >= 0; i--) {
+      const b = boxen[i], g = 16 * b.sc;
+      if (x >= b.x + b.w - g && x <= b.x + b.w + 5 && y >= b.y + b.h - g && y <= b.y + b.h + 5) return b;
+    }
+    return null;
+  }
+  function groesse(b, sc) {                    // Größe setzen und Maße nachziehen
+    b.sc = clamp(sc, 0.6, 2.2);
+    b.w = Math.round(b.w0 * b.sc); b.h = Math.round(b.h0 * b.sc);
+    b.x = clamp(b.x, 4, W - b.w - 4); b.y = clamp(b.y, 56 / Z, H - b.h - 20);
+  }
+  addEventListener("pointermove", e => {
+    const mx = e.clientX / Z, my = e.clientY / Z;
+    if (drag && drag.gr) { groesse(drag.b, (mx - drag.b.x) / drag.b.w0); drag.moved = true; return; }
+    if (drag) { drag.b.x = clamp(mx - drag.dx, 4, W - drag.b.w - 4); drag.b.y = clamp(my - drag.dy, 56 / Z, H - drag.b.h - 20);
+      if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 5) drag.moved = true; return; }
+    const frei = J.bots && J.bots.frei(e), b = frei ? treffer(mx, my) : null;
+    document.body.classList.toggle("jv-retrogroesse", !!(frei && griff(mx, my)));
+    if (b !== hov) { hov = b; document.body.classList.toggle("jv-retrohover", !!b); if (!b || b.kern) J.bots.karteAus(); }
+    if (hov && !hov.kern) J.bots.karte(hov.cfg, (hov.x + hov.w) * Z, (hov.y + hov.h / 2) * Z, 10, hov.busy);
+  });
+  addEventListener("pointerdown", e => {
+    if (e.button || !J.bots || !J.bots.frei(e)) return;
+    const gb = griff(e.clientX / Z, e.clientY / Z);
+    if (gb) { e.preventDefault(); drag = { b: gb, gr: 1, sx: e.clientX, sy: e.clientY, moved: false }; document.body.classList.add("jv-retrogreifen"); return; }
+    const b = treffer(e.clientX / Z, e.clientY / Z); if (!b) return;
+    e.preventDefault(); drag = { b, dx: e.clientX / Z - b.x, dy: e.clientY / Z - b.y, sx: e.clientX, sy: e.clientY, moved: false };
+    document.body.classList.add("jv-retrogreifen");
+  });
+  const los = e => {
+    if (!drag) return; const d = drag; drag = null; document.body.classList.remove("jv-retrogreifen");
+    merken();
+    if (!d.moved && e.type === "pointerup") { J.bots.karteAus(); if (d.b.kern) J.openSettings("ki"); else J.bots.dash(d.b.id, (d.b.x + d.b.w) * Z, (d.b.y + 40) * Z); }
+  };
+  addEventListener("pointerup", los); addEventListener("pointercancel", los);
+  addEventListener("wheel", e => {             // Mausrad über einem Kasten ändert ebenfalls die Größe
+    if (!J.bots || !J.bots.frei(e)) return;
+    const b = treffer(e.clientX / Z, e.clientY / Z) || griff(e.clientX / Z, e.clientY / Z); if (!b) return;
+    e.preventDefault(); groesse(b, b.sc * (e.deltaY > 0 ? 0.94 : 1.064)); merken();
+  }, { passive: false });
+
+  J.registerTheme({
+    id: "retro", maus: "aus", scharf: true,
+    bots: "eigene",                 // diese Oberfläche zeichnet ihre Bots selbst
+    init(J) {
+      document.title = ((J.settings.name || "Jarvis").toUpperCase()) + " · Retro";
+      J.on("bot", e => { if (e.phase === "ende") puls[e.id] = 1; });
+      J.on("settings", () => { tick = 0; });
+    },
+    resize(w, h) { Z = zoom(w, h); W = w / Z; H = h / Z; tick = 0; },
+    draw(ctx, w, h, S) {
+      Z = zoom(w, h); W = w / Z; H = h / Z; ctx.save(); ctx.scale(Z, Z);
+      if (!boxen.length || tick <= 0) { boxen = bauen(); boxen.forEach(b => masse(ctx, b)); platzieren(); tick = 20; }
+      if (--tick <= 0) {                                   // Inhalte regelmäßig auffrischen, Plätze behalten
+        const alt = {}; boxen.forEach(b => { alt[b.id] = [b.x, b.y]; });
+        boxen = bauen(); boxen.forEach(b => { masse(ctx, b); if (alt[b.id]) { b.x = alt[b.id][0]; b.y = alt[b.id][1]; } });
+        if (boxen.some(b => !alt[b.id])) platzieren();
+        if (hov) hov = boxen.find(b => b.id === hov.id) || null;
+        if (drag) drag.b = boxen.find(b => b.id === drag.b.id) || drag.b;
+        tick = 20;
+      }
+      for (const k in puls) { puls[k] = Math.max(0, puls[k] - S.dt * 0.7); }
+      raster(ctx);
+      geschwister(ctx, S.t);
+      for (let i = 1; i < boxen.length; i++) linie(ctx, boxen[0], boxen[i], S.t);
+      // Herzschlag des Kerns
+      const k = boxen[0], kx = k.x + k.w / 2, ky = k.y + k.h / 2, pr = 60 + S.level * 120 + S.pulse * 40;
+      const g = ctx.createRadialGradient(kx, ky, 0, kx, ky, pr);
+      g.addColorStop(0, `rgba(111,227,255,${0.1 + S.level * 0.14})`); g.addColorStop(1, "rgba(111,227,255,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(kx, ky, pr, 0, TAU); ctx.fill();
+      for (const b of boxen) kasten(ctx, b, S.t);
+      rahmen(ctx);
+      ctx.textBaseline = "alphabetic";
+      ctx.restore();
+    }
+  });
+})();
+</script>
+</body>
+</html>
