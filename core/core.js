@@ -558,8 +558,12 @@
       h += `<option value="__reload">↻ Modelle neu suchen</option>`;
       sel.innerHTML = h;
       const cur = r.anbieter + "|" + r.modell;
-      if (r.modell && [...sel.options].some(o => o.value === cur)) sel.value = cur; else sel.selectedIndex = -1;
       const ok = !!r.modell && (r.liste[r.anbieter] || {}).ok;
+      if (r.modell && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+      else {   // sonst stünde oben rechts nur ein leeres Feld: lieber sagen, was fehlt
+        sel.insertAdjacentHTML("afterbegin", `<option value="" disabled>${ok ? "Modell wählen …" : "Keine KI gefunden · Einstellungen → KI"}</option>`);
+        sel.selectedIndex = 0;
+      }
       box.classList.toggle("ok", ok); box.classList.toggle("bad", !ok);
       box.title = ok ? "Aktiv: " + PROV[r.anbieter] + " · " + r.modell : ((r.liste[r.anbieter] || {}).fehler || "Keine KI verfügbar. Einstellungen öffnen.");
       J.emit("models", r); privBadge();

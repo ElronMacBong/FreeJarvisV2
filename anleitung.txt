@@ -482,6 +482,18 @@ Adresse im schwarzen Fenster an.
 ---------------------------------------------------------------------
 14. FEHLERBEHEBUNG
 ---------------------------------------------------------------------
+>> VON VERSION 1.x UMSTEIGEN
+   1. Neue Version in einen EIGENEN Ordner entpacken, nicht über den
+      alten kopieren (alte Dateien würden sonst liegen bleiben).
+   2. Aus dem alten Ordner einstellungen.json und gedaechtnis.json in
+      den neuen kopieren. Schlüssel, Stimme, Routinen und das
+      Gedächtnis sind dann sofort da. Neue Einstellungen bekommen
+      automatisch ihre Standardwerte.
+   3. Alten Jarvis beenden (schwarzes Fenster schließen), neuen starten.
+   ACHTUNG: Die alte einstellungen.json bringt deine alten Schalter mit.
+   In 1.x war die Websuche an. Wer Kosten sparen will: Einstellungen ->
+   KI & Modelle -> Websuche aus (Abschnitt 21).
+
 >> VON TEIL 1 (Ollama) ZU TEIL 2 (API) GEWECHSELT, JETZT GEHT NICHTS?
    Diese Version kann beides. Prüfe der Reihe nach:
    a) Wurde start.bat gestartet und ist das schwarze Fenster offen?
@@ -1042,11 +1054,11 @@ MEIN GUTHABEN
 
 PREISE
   Für die Claude-Modelle sind die Listenpreise hinterlegt (Stand
-  13.11.2026, Quelle: platform.claude.com/docs/en/about-claude/pricing).
+  14.11.2026, Quelle: platform.claude.com/docs/en/about-claude/pricing).
   Preise ändern sich. Für OpenAI, Groq, OpenRouter und andere trägst du
   sie selbst ein, je Zeile:
      modellteil = eingabe / ausgabe      (US-Dollar je 1 Mio. Token)
-  Beispiel:  gpt-5 = 1.25 / 10
+  Beispiel:  gpt-5 = 1.25 / 10   (aktuelle Preise beim Anbieter nachsehen)
   "modellteil" ist ein Stück des Modellnamens. Eigene Zeilen gehen vor
   den hinterlegten Preisen. Ohne Preis zählt Jarvis nur die Token, und
   das Widget weist darauf hin.

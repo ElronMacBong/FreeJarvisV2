@@ -776,7 +776,7 @@ def route(u, s, orig=None, ohne_url=False):
                     mins = float(w.replace(",", "."))
                     actions.append({"typ": "timer", "sek": int(mins * 60), "text": r["satz"]})
                     ctx.append(f"Ein Timer über {w} Minuten läuft jetzt (Routine '{r['satz']}'). Bestätige kurz.")
-                    kurz.append(f"Timer läuft: {w} Minuten.")
+                    kurz.append(f"Timer läuft: {w} {'Minute' if mins == 1 else 'Minuten'}.")
                 except ValueError:
                     pass
             actions.append({"typ": "routine", "satz": r["satz"]})
@@ -800,7 +800,7 @@ def route(u, s, orig=None, ohne_url=False):
     if t:
         actions.append({"typ": "timer", **t})
         mins = t["sek"] / 60
-        dauer_text = ('%g Minuten' % mins) if t['sek'] >= 60 else str(t['sek']) + ' Sekunden'
+        dauer_text = (('%g Minute' if mins == 1 else '%g Minuten') % mins) if t['sek'] >= 60 else (f"{t['sek']} Sekunde" if t['sek'] == 1 else f"{t['sek']} Sekunden")
         ctx.append(f"Ein Timer läuft jetzt: {dauer_text}, Erinnerungstext: '{t['text']}'. Bestätige kurz.")
         kurz.append(f"Timer läuft: {dauer_text}.")
 
@@ -1255,7 +1255,7 @@ def pc_pfad(s, ziel, muss_existieren=True):
     if os.path.isabs(os.path.expanduser(ziel)):
         kand.append(os.path.expanduser(ziel))
     else:
-        teile = re.split(r"[\\/]+", ziel, 1)
+        teile = re.split(r"[\\/]+", ziel, maxsplit=1)
         for o in sorted(ordner, key=lambda x: -len(x["name"])):
             if teile[0].lower() in (o["name"].lower(), os.path.basename(o["pfad"].rstrip("/\\")).lower()):
                 kand.append(os.path.join(os.path.expanduser(o["pfad"]), teile[1] if len(teile) > 1 else ""))
@@ -1505,9 +1505,12 @@ def ki_stream(s, anbieter, model, system, msgs, on_event):
 # Quelle: https://platform.claude.com/docs/en/about-claude/pricing · Stand siehe PREISE_STAND.
 # Preise ändern sich. Eigene oder neuere Preise trägt man in den Einstellungen ein, sie gehen vor.
 PREISE_STAND = "13.11.2026"
+# Listenpreise in US-Dollar je 1 Mio. Token (Eingabe, Ausgabe), Stand 14.11.2026, platform.claude.com/docs/en/about-claude/pricing.
+# Der erste passende Namensteil gewinnt, deshalb stehen die genaueren Namen vorn. Haiku 5.5 kostet ab 100.000 Token
+# Eingabe je Anfrage mehr (0,50 / 2,50); bei Jarvis kommt das praktisch nicht vor.
 PREISE = [("fable-5-2", 8, 40), ("mythos-5-2", 8, 40), ("fable-5", 10, 50), ("mythos-5", 10, 50),
           ("opus-5-5", 4, 20), ("opus-5", 5, 25), ("opus-4-8", 5, 25), ("opus-4-7", 5, 25), ("opus-4-6", 5, 25), ("opus-4-5", 5, 25),
-          ("sonnet-5", 2, 10), ("sonnet-4-6", 3, 15), ("sonnet-4-5", 3, 15), ("haiku-5-5", 0.10, 0.50), ("haiku-4-5", 1, 5)]
+          ("opus-4", 15, 75), ("sonnet-5", 2, 10), ("sonnet-4", 3, 15), ("haiku-5-5", 0.10, 0.50), ("haiku-4-5", 1, 5)]
 SUCHE_USD = 0.01                     # Claude-Websuche: 10 US-Dollar je 1000 Suchen
 KOSTEN = {"tage": {}, "ab": "", "seitdem": 0.0}
 
@@ -2008,6 +2011,8 @@ def run_chat(payload, emit):
         return fertig(" ".join(kurz))
     if cloud:                                          # privat markierte Nachrichten gehen nie in die Cloud
         msgs = clean_history([m for m in raw[:-1] if not m.get("privat")] + [{"role": "user", "content": text}], n=n)
+    if not model and kurz:                             # keine KI erreichbar, der Befehl (Timer, Wetter ...) ist aber erledigt
+        return fertig(" ".join(kurz))
     if not model:
         return emit({"t": "error", "message": {
             "ollama": "Kein Ollama-Modell gefunden. Läuft Ollama und ist ein Modell installiert? (ollama pull llama3.2)",
@@ -2095,6 +2100,13 @@ STATIC = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=
 ORDNER = ("core/", "oberflaechen/", "sounds/")           # nur von hier werden Dateien ausgeliefert, dazu jarvis.html
 CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
        "media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+
+
+class Server(ThreadingHTTPServer):
+    # Unter Windows erlaubt SO_REUSEADDR, einen schon belegten Port ein zweites Mal zu öffnen. Dann liefen zwei
+    # Jarvis-Fenster auf demselben Port und Antworten kämen mal vom einen, mal vom anderen. Deshalb dort aus.
+    allow_reuse_address = os.name != "nt"
+    daemon_threads = True
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -2346,7 +2358,7 @@ def main():
     srv, port = None, PORT
     for p in range(PORT, PORT + 10):
         try:
-            srv = ThreadingHTTPServer((HOST, p), Handler)
+            srv = Server((HOST, p), Handler)
             port = p
             break
         except OSError:
