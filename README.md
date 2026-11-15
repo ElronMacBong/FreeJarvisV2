@@ -87,4 +87,4 @@ Eine Datei aus `oberflaechen/` kopieren und den Teil in `Jarvis.registerTheme({.
 
 ## Lizenz
 
-MIT, siehe `LICENSE`.
+PolyForm Noncommercial 1.0.0, siehe LICENSE. Nicht-kommerzielle Nutzung erlaubt, kommerzielle Nutzung nur mit meiner Erlaubnis.
