@@ -1,0 +1,62 @@
+RECHTLICHE HINWEISE – FreeJarvis
+================================
+
+1. URHEBER
+FreeJarvis wurde von Max Kröner (YouTube: irgendwasmitIT) entwickelt.
+Alle Rechte am Grundprojekt liegen beim Urheber, soweit sie nicht
+durch die Lizenz ausdrücklich eingeräumt werden.
+
+2. LIZENZ
+Verbindlich ist die Lizenz in der Datei LICENSE
+(PolyForm Noncommercial License 1.0.0). Diese Datei erklärt die
+wichtigsten Punkte in einfachen Worten. Bei Widersprüchen gilt
+die LICENSE.
+
+3. WAS ERLAUBT IST
+- FreeJarvis herunterladen, nutzen und ausprobieren
+- den Code verändern, erweitern und damit experimentieren
+- eigene private oder nicht-kommerzielle Projekte auf Basis
+  von FreeJarvis erstellen und teilen
+
+4. WAS NICHT ERLAUBT IST
+- jede kommerzielle Nutzung von FreeJarvis oder von Projekten,
+  die darauf aufbauen, zum Beispiel Verkauf, kostenpflichtige
+  Angebote oder Einsatz in Unternehmen zu Erwerbszwecken
+- die Nutzung für rechtswidrige Zwecke oder zum Schaden anderer
+- das Entfernen dieses Hinweises oder der Urheberangabe
+
+Für eine kommerzielle Nutzung ist eine vorherige schriftliche
+Erlaubnis des Urhebers nötig.
+
+5. NAMENSNENNUNG
+Wer FreeJarvis weitergibt oder ein eigenes Projekt darauf
+aufbaut, nennt bitte den Urheber und verlinkt das Original.
+
+6. HAFTUNGSAUSSCHLUSS
+FreeJarvis wird kostenlos und ohne jede Gewährleistung
+bereitgestellt. Die Nutzung erfolgt auf eigenes Risiko.
+Soweit gesetzlich zulässig, haftet der Urheber nicht für
+Schäden, Datenverluste, Kosten oder rechtliche Folgen, die
+durch die Nutzung, Veränderung oder den Missbrauch der Software
+entstehen. Für Handlungen Dritter mit FreeJarvis oder mit
+veränderten Versionen ist allein der jeweilige Nutzer
+verantwortlich.
+
+7. DIENSTE VON DRITTANBIETERN
+FreeJarvis kann Dienste wie Anthropic (Claude), OpenAI,
+ElevenLabs oder Home Assistant anbinden. Für deren Kosten,
+Nutzungsbedingungen und Datenschutz ist der Nutzer selbst
+verantwortlich. API-Schlüssel gehören nur in die lokale
+einstellungen.json und dürfen nicht veröffentlicht werden.
+
+8. STIMMEN UND PERSÖNLICHKEITSRECHTE
+Wer Stimmen klont oder einbindet, braucht die Einwilligung
+der betroffenen Person. Die Verantwortung dafür liegt allein
+beim Nutzer.
+
+9. MARKEN
+FreeJarvis ist ein unabhängiges Projekt und steht in keiner
+Verbindung zu Marvel, Disney oder anderen Rechteinhabern der
+Figur „J.A.R.V.I.S.“.
+
+Stand: 15.11.2026
