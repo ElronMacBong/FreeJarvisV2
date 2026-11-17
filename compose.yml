@@ -1,0 +1,14 @@
+services:
+  freejarvis-python:
+    image: python:3.12-slim
+    container_name: freejarvis
+    working_dir: /app
+    command: python server.py
+    network_mode: host
+    environment:
+      JAVRIS_PORT: 5050
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./:/app
+    restart: unless-stopped
+    init: true
